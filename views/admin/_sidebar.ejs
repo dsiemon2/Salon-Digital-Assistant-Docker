@@ -1,0 +1,32 @@
+<nav class="col-md-2 d-none d-md-block sidebar p-0" style="background: <%= branding?.primaryColor || '#db2777' %>">
+  <div class="p-3 text-white">
+    <h5><i class="bi bi-scissors"></i> Salon Admin</h5>
+    <small>AI Receptionist</small>
+  </div>
+  <ul class="nav flex-column">
+    <li class="nav-item"><a class="nav-link <%= active === 'dashboard' ? 'active' : '' %>" href="<%= basePath %>/admin/?token=<%= token %>"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'appointments' ? 'active' : '' %>" href="<%= basePath %>/admin/appointments?token=<%= token %>"><i class="bi bi-calendar-check"></i> Appointments</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'stylists' ? 'active' : '' %>" href="<%= basePath %>/admin/stylists?token=<%= token %>"><i class="bi bi-person-badge"></i> Stylists</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'services' ? 'active' : '' %>" href="<%= basePath %>/admin/services?token=<%= token %>"><i class="bi bi-list-check"></i> Services</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'calls' ? 'active' : '' %>" href="<%= basePath %>/admin/calls?token=<%= token %>"><i class="bi bi-telephone"></i> Call Logs</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'scripts' ? 'active' : '' %>" href="<%= basePath %>/admin/scripts?token=<%= token %>"><i class="bi bi-file-text"></i> AI Scripts</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'kb' ? 'active' : '' %>" href="<%= basePath %>/admin/kb?token=<%= token %>"><i class="bi bi-book"></i> Knowledge Base</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'analytics' ? 'active' : '' %>" href="<%= basePath %>/admin/analytics?token=<%= token %>"><i class="bi bi-graph-up"></i> Analytics</a></li>
+    <div class="nav-divider"></div>
+    <div class="nav-section">Configuration</div>
+    <li class="nav-item"><a class="nav-link <%= active === 'voices' ? 'active' : '' %>" href="<%= basePath %>/admin/voices?token=<%= token %>"><i class="bi bi-volume-up"></i> Voices</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'greeting' ? 'active' : '' %>" href="<%= basePath %>/admin/greeting?token=<%= token %>"><i class="bi bi-chat-quote"></i> Greeting</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'sms' ? 'active' : '' %>" href="<%= basePath %>/admin/sms?token=<%= token %>"><i class="bi bi-chat-dots"></i> SMS Settings</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'transfer' ? 'active' : '' %>" href="<%= basePath %>/admin/transfer?token=<%= token %>"><i class="bi bi-telephone-forward"></i> Call Transfer</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'dtmf' ? 'active' : '' %>" href="<%= basePath %>/admin/dtmf?token=<%= token %>"><i class="bi bi-grid-3x3"></i> DTMF Menu</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'tools' ? 'active' : '' %>" href="<%= basePath %>/admin/tools?token=<%= token %>"><i class="bi bi-tools"></i> AI Tools</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'agents' ? 'active' : '' %>" href="<%= basePath %>/admin/agents?token=<%= token %>"><i class="bi bi-people"></i> AI Agents</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'webhooks' ? 'active' : '' %>" href="<%= basePath %>/admin/webhooks?token=<%= token %>"><i class="bi bi-broadcast"></i> Webhooks</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'settings' ? 'active' : '' %>" href="<%= basePath %>/admin/settings?token=<%= token %>"><i class="bi bi-gear"></i> Settings</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'features' ? 'active' : '' %>" href="<%= basePath %>/admin/features?token=<%= token %>"><i class="bi bi-toggles"></i> Features</a></li>
+    <div class="nav-divider"></div>
+    <li class="nav-item"><a class="nav-link <%= active === 'help' ? 'active' : '' %>" href="<%= basePath %>/admin/help?token=<%= token %>"><i class="bi bi-question-circle"></i> Help</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'account' ? 'active' : '' %>" href="<%= basePath %>/admin/account?token=<%= token %>"><i class="bi bi-person-circle"></i> Account</a></li>
+    <li class="nav-item"><a class="nav-link <%= active === 'about' ? 'active' : '' %>" href="<%= basePath %>/admin/about?token=<%= token %>"><i class="bi bi-info-circle"></i> About</a></li>
+  </ul>
+</nav>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics - Salon Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    .sidebar { min-height: 100vh; background: #2c3e50; }
+    .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .sidebar .nav-link i { margin-right: 0.5rem; }
+    .main-content { background: #f8f9fa; min-height: 100vh; }
+    .stat-card { border-left: 4px solid; }
+    .stat-card.primary { border-color: #0d6efd; }
+    .stat-card.success { border-color: #198754; }
+    .stat-card.info { border-color: #0dcaf0; }
+    .stat-card.warning { border-color: #ffc107; }
+    .nav-divider { border-top: 1px solid rgba(255,255,255,0.2); margin: 0.5rem 0; }
+    .nav-section { color: rgba(255,255,255,0.5); font-size: 0.75rem; padding: 0.5rem 1rem; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <%- include('_sidebar', { token, active: 'analytics' }) %>
+
+      <main class="col-md-10 ms-sm-auto main-content p-4">
+        <h2 class="mb-4">Analytics (Last 30 Days)</h2>
+
+        <div class="row mb-4">
+          <div class="col-md-3">
+            <div class="card stat-card primary">
+              <div class="card-body">
+                <h6 class="text-muted">Total Calls</h6>
+                <h3><%= stats.totalCalls %></h3>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card success">
+              <div class="card-body">
+                <h6 class="text-muted">Completed Calls</h6>
+                <h3><%= stats.completedCalls %></h3>
+                <small class="text-muted"><%= stats.totalCalls > 0 ? Math.round(stats.completedCalls / stats.totalCalls * 100) : 0 %>% completion rate</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card info">
+              <div class="card-body">
+                <h6 class="text-muted">Appointments Booked</h6>
+                <h3><%= stats.appointmentsBooked || 0 %></h3>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card warning">
+              <div class="card-body">
+                <h6 class="text-muted">Appointments Cancelled</h6>
+                <h3><%= stats.appointmentsCancelled || 0 %></h3>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">Top Intents</h5>
+              </div>
+              <div class="card-body">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Intent</th>
+                      <th>Count</th>
+                      <th>%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <%
+                    const totalIntents = topIntents.reduce((sum, i) => sum + i._count, 0);
+                    topIntents.forEach(intent => {
+                    %>
+                    <tr>
+                      <td><%= intent.intent %></td>
+                      <td><%= intent._count %></td>
+                      <td>
+                        <div class="progress" style="width: 100px">
+                          <div class="progress-bar" style="width: <%= totalIntents > 0 ? Math.round(intent._count / totalIntents * 100) : 0 %>%"></div>
+                        </div>
+                      </td>
+                    </tr>
+                    <% }); %>
+                  </tbody>
+                </table>
+
+                <% if (topIntents.length === 0) { %>
+                  <p class="text-muted text-center">No intent data yet</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">Key Metrics</h5>
+              </div>
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                  <span>Booking Rate</span>
+                  <strong><%= stats.totalCalls > 0 ? Math.round((stats.appointmentsBooked || 0) / stats.totalCalls * 100) : 0 %>%</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                  <span>Cancellation Rate</span>
+                  <strong><%= (stats.appointmentsBooked || 0) > 0 ? Math.round((stats.appointmentsCancelled || 0) / stats.appointmentsBooked * 100) : 0 %>%</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                  <span>Call Completion Rate</span>
+                  <strong><%= stats.totalCalls > 0 ? Math.round(stats.completedCalls / stats.totalCalls * 100) : 0 %>%</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

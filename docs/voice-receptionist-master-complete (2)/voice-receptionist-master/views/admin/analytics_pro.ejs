@@ -1,0 +1,23 @@
+<% layout('layout', { token }) %>
+<div class="card">
+  <h2>KB Accuracy & Deflection (Last 30 Days)</h2>
+  <p><strong>Calls that used KB:</strong> <%= kbCalls %></p>
+  <p><strong>Deflected by KB (no transfer, completed):</strong> <%= kbDeflected %></p>
+  <p><strong>Deflection Rate:</strong> <%= deflectionPct %>%</p>
+</div>
+
+<div class="card">
+  <h3>Per-Intent Volume</h3>
+  <% if (byIntent?.length) { %>
+    <table>
+      <thead><tr><th>Intent</th><th>Count</th></tr></thead>
+      <tbody>
+        <% byIntent.forEach(([name, count]) => { %>
+          <tr><td><%= name %></td><td><%= count %></td></tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } else { %>
+    <p>No intents logged in the period.</p>
+  <% } %>
+</div>

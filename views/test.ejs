@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local Test - Soup Cookoff Voice Assistant</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: white;
+    }
+    .test-container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+    }
+    .status-indicator.disconnected { background: #dc3545; }
+    .status-indicator.connected { background: #198754; }
+    .status-indicator.listening { background: #0dcaf0; animation: pulse 1s infinite; }
+    .status-indicator.speaking { background: #ffc107; animation: pulse 0.5s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .mic-button {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      font-size: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+    }
+    .mic-button:hover {
+      transform: scale(1.05);
+    }
+    .mic-button.active {
+      background: #198754 !important;
+      border-color: #198754 !important;
+    }
+    .transcript-box {
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 1rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .message {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+    .message.user {
+      background: rgba(13, 110, 253, 0.3);
+      text-align: right;
+    }
+    .message.assistant {
+      background: rgba(25, 135, 84, 0.3);
+    }
+    .visualizer {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+    }
+    .visualizer-bar {
+      width: 4px;
+      background: #0dcaf0;
+      border-radius: 2px;
+      transition: height 0.1s;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <div class="text-center mb-4">
+      <h2><i class="bi bi-mic"></i> Soup Cookoff Voice Test</h2>
+      <p class="text-muted">Test the voice assistant locally with your microphone</p>
+    </div>
+
+    <div class="card bg-dark border-secondary mb-4">
+      <div class="card-body text-center">
+        <div class="mb-3">
+          <span class="status-indicator" id="statusIndicator"></span>
+          <span id="statusText">Disconnected</span>
+        </div>
+
+        <div class="visualizer mb-3" id="visualizer"></div>
+
+        <button class="btn btn-primary mic-button mx-auto" id="micButton" disabled>
+          <i class="bi bi-mic-fill"></i>
+        </button>
+        <p class="mt-3 text-muted small">Click to start/stop listening</p>
+      </div>
+    </div>
+
+    <div class="card bg-dark border-secondary mb-4">
+      <div class="card-header">
+        <i class="bi bi-chat-dots"></i> Conversation
+      </div>
+      <div class="card-body">
+        <div class="transcript-box" id="transcript">
+          <p class="text-muted text-center">Start talking to see the conversation...</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-dark border-secondary">
+      <div class="card-header">
+        <i class="bi bi-keyboard"></i> Text Input (Alternative)
+      </div>
+      <div class="card-body">
+        <div class="input-group">
+          <input type="text" class="form-control bg-dark text-white border-secondary"
+                 id="textInput" placeholder="Type a message..." disabled>
+          <button class="btn btn-outline-primary" id="sendButton" disabled>
+            <i class="bi bi-send"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-dark border-secondary mb-4">
+      <div class="card-header">
+        <i class="bi bi-person"></i> Caller Info
+      </div>
+      <div class="card-body">
+        <div class="input-group">
+          <span class="input-group-text bg-dark text-white border-secondary">Name</span>
+          <input type="text" class="form-control bg-dark text-white border-secondary"
+                 id="callerName" placeholder="Daniel Siemon" value="Daniel Siemon">
+          <span class="input-group-text bg-dark text-white border-secondary">(Via AI)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center mt-4">
+      <button class="btn btn-success" id="connectButton">
+        <i class="bi bi-plug"></i> Connect
+      </button>
+      <button class="btn btn-danger ms-2" id="endCallButton" disabled>
+        <i class="bi bi-telephone-x"></i> End Call
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const statusIndicator = document.getElementById('statusIndicator');
+    const statusText = document.getElementById('statusText');
+    const micButton = document.getElementById('micButton');
+    const transcript = document.getElementById('transcript');
+    const textInput = document.getElementById('textInput');
+    const sendButton = document.getElementById('sendButton');
+    const connectButton = document.getElementById('connectButton');
+    const endCallButton = document.getElementById('endCallButton');
+    const visualizer = document.getElementById('visualizer');
+
+    let callStartTime = null;
+    let conversationLog = [];
+
+    let ws = null;
+    let audioContext = null;
+    let mediaStream = null;
+    let processor = null;
+    let isListening = false;
+
+    // Audio queue for sequential playback (prevents overlapping)
+    let audioQueue = [];
+    let isPlayingAudio = false;
+
+    // Create visualizer bars
+    for (let i = 0; i < 20; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'visualizer-bar';
+      bar.style.height = '4px';
+      visualizer.appendChild(bar);
+    }
+    const bars = visualizer.querySelectorAll('.visualizer-bar');
+
+    function setStatus(status, text) {
+      statusIndicator.className = 'status-indicator ' + status;
+      statusText.textContent = text;
+    }
+
+    function addMessage(text, role) {
+      if (transcript.querySelector('.text-muted')) {
+        transcript.innerHTML = '';
+      }
+      const lastMessage = transcript.lastElementChild;
+      if (lastMessage && lastMessage.classList.contains(role)) {
+        lastMessage.textContent += text;
+        // Update last log entry
+        if (conversationLog.length > 0 && conversationLog[conversationLog.length - 1].role === role) {
+          conversationLog[conversationLog.length - 1].text += text;
+        }
+      } else {
+        const div = document.createElement('div');
+        div.className = 'message ' + role;
+        div.textContent = text;
+        transcript.appendChild(div);
+        // Add to conversation log
+        conversationLog.push({ role, text, timestamp: new Date().toISOString() });
+      }
+      transcript.scrollTop = transcript.scrollHeight;
+    }
+
+    async function connect() {
+      // Clear the chat window and reset for new conversation
+      transcript.innerHTML = '<p class="text-muted text-center">Start talking to see the conversation...</p>';
+      conversationLog = [];
+
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioContext = new AudioContext({ sampleRate: 24000 });
+
+        // Resume audio context (required by browsers)
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${window.location.host}/ws/local-test`);
+
+        ws.onopen = () => {
+          console.log('WebSocket connected');
+          setStatus('connected', 'Connected');
+          micButton.disabled = false;
+          textInput.disabled = false;
+          sendButton.disabled = false;
+          endCallButton.disabled = false;
+          connectButton.textContent = 'Disconnect';
+          connectButton.className = 'btn btn-warning';
+          callStartTime = new Date();
+          conversationLog = [];
+        };
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          console.log('Received:', data.type, data);
+
+          switch (data.type) {
+            case 'audio':
+              // Stop mic while AI speaks
+              if (isListening) stopListening();
+              setStatus('speaking', 'Assistant speaking...');
+              // Queue audio for sequential playback
+              queueAudio(data.audio);
+              break;
+            case 'assistant_transcript':
+              addMessage(data.text, 'assistant');
+              break;
+            case 'user_transcript':
+              addMessage(data.text, 'user');
+              break;
+            case 'error':
+              console.error('Error:', data.message);
+              addMessage('Error: ' + data.message, 'assistant');
+              break;
+          }
+        };
+
+        ws.onclose = () => disconnect();
+        ws.onerror = (err) => {
+          console.error('WebSocket error:', err);
+          disconnect();
+        };
+
+      } catch (err) {
+        console.error('Connection error:', err);
+        alert('Failed to connect. Make sure microphone is allowed and server is running.');
+      }
+    }
+
+    function disconnect() {
+      if (ws) { ws.close(); ws = null; }
+      if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+      if (audioContext) { audioContext.close(); audioContext = null; }
+      if (processor) { processor.disconnect(); processor = null; }
+
+      isListening = false;
+      isPlayingAudio = false;
+      audioQueue = [];
+      micButton.disabled = true;
+      micButton.classList.remove('active');
+      textInput.disabled = true;
+      sendButton.disabled = true;
+      endCallButton.disabled = true;
+      setStatus('disconnected', 'Disconnected');
+      connectButton.textContent = 'Connect';
+      connectButton.className = 'btn btn-success';
+    }
+
+    async function endCall() {
+      if (!callStartTime) return;
+
+      const endTime = new Date();
+      const durationSeconds = Math.round((endTime - callStartTime) / 1000);
+      const callerNameInput = document.getElementById('callerName');
+      const callerName = callerNameInput ? callerNameInput.value.trim() : null;
+
+      const callData = {
+        startedAt: callStartTime.toISOString(),
+        endedAt: endTime.toISOString(),
+        duration: durationSeconds,
+        callerName: callerName ? callerName + ' (Via AI)' : 'Test User (Via AI)',
+        transcript: conversationLog,
+        outcome: 'completed'
+      };
+
+      try {
+        const response = await fetch('/api/test-call-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(callData)
+        });
+        const result = await response.json();
+        if (result.success) {
+          alert('Call logged successfully! Call ID: ' + result.callId);
+        }
+      } catch (err) {
+        console.error('Failed to log call:', err);
+      }
+
+      disconnect();
+    }
+
+    function startListening() {
+      if (!audioContext || !mediaStream || !ws) return;
+
+      isListening = true;
+      micButton.classList.add('active');
+      setStatus('listening', 'Listening...');
+
+      const source = audioContext.createMediaStreamSource(mediaStream);
+      processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+      processor.onaudioprocess = (e) => {
+        if (!isListening || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+        const inputData = e.inputBuffer.getChannelData(0);
+
+        // Update visualizer
+        let sum = 0;
+        for (let i = 0; i < inputData.length; i++) sum += Math.abs(inputData[i]);
+        const avg = sum / inputData.length;
+        bars.forEach(bar => {
+          bar.style.height = Math.min(60, Math.max(4, avg * 500 * (1 + Math.random() * 0.5))) + 'px';
+        });
+
+        // Send audio
+        const pcm16 = floatTo16BitPCM(inputData);
+        const base64 = arrayBufferToBase64(pcm16.buffer);
+        ws.send(JSON.stringify({ type: 'audio', audio: base64 }));
+      };
+
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+    }
+
+    function stopListening() {
+      isListening = false;
+      micButton.classList.remove('active');
+      if (processor) { processor.disconnect(); processor = null; }
+      bars.forEach(bar => bar.style.height = '4px');
+      if (!isPlayingAudio) setStatus('connected', 'Connected');
+    }
+
+    function floatTo16BitPCM(float32Array) {
+      const buffer = new Int16Array(float32Array.length);
+      for (let i = 0; i < float32Array.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32Array[i]));
+        buffer[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      return buffer;
+    }
+
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    }
+
+    // Queue audio chunk for playback
+    function queueAudio(base64Audio) {
+      const binaryString = atob(base64Audio);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const int16Array = new Int16Array(bytes.buffer);
+      const float32Array = new Float32Array(int16Array.length);
+      for (let i = 0; i < int16Array.length; i++) {
+        float32Array[i] = int16Array[i] / 32768.0;
+      }
+
+      audioQueue.push(float32Array);
+      if (!isPlayingAudio) playNextAudio();
+    }
+
+    // Play next audio chunk in queue
+    function playNextAudio() {
+      if (audioQueue.length === 0) {
+        isPlayingAudio = false;
+        // Auto-start listening after AI finishes speaking
+        setStatus('listening', 'Listening...');
+        startListening();
+        return;
+      }
+
+      isPlayingAudio = true;
+      const audioData = audioQueue.shift();
+
+      const audioBuffer = audioContext.createBuffer(1, audioData.length, 24000);
+      audioBuffer.copyToChannel(audioData, 0);
+
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      source.onended = playNextAudio;
+      source.start();
+    }
+
+    function sendText() {
+      const text = textInput.value.trim();
+      if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+      addMessage(text, 'user');
+      ws.send(JSON.stringify({ type: 'text', text }));
+      textInput.value = '';
+    }
+
+    // Event listeners
+    connectButton.addEventListener('click', () => {
+      if (ws) disconnect();
+      else connect();
+    });
+
+    micButton.addEventListener('click', () => {
+      if (isListening) stopListening();
+      else startListening();
+    });
+
+    sendButton.addEventListener('click', sendText);
+    textInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendText();
+    });
+
+    endCallButton.addEventListener('click', endCall);
+
+    setStatus('disconnected', 'Disconnected');
+  </script>
+</body>
+</html>

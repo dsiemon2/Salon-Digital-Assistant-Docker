@@ -1,0 +1,13 @@
+<% layout('layout', { token }) %>
+<form class="card" method="post" action="/admin/kb/new">
+  <input type="hidden" name="token" value="<%= token %>"/>
+  <h2>New Knowledge Article</h2>
+  <label>Title</label>
+  <input name="title" placeholder="Hours and Location" required />
+  <label>Language (BCP-47 code)</label>
+  <input name="language" value="en" />
+  <label>Markdown Content</label>
+  <textarea name="content" rows="12" placeholder="# Heading\n\nYour content..." required></textarea>
+  <p><button class="btn" type="submit">Save</button></p>
+  <p><small class="mono">After adding docs, run the indexer: <code>npm run kb:index</code> to embed and chunk.</small></p>
+</form>

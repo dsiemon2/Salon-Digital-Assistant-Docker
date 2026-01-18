@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= doc ? 'Edit' : 'New' %> Article - Salon Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    .sidebar { min-height: 100vh; background: #2c3e50; }
+    .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .sidebar .nav-link i { margin-right: 0.5rem; }
+    .main-content { background: #f8f9fa; min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <%- include('_sidebar', { token, active: 'kb' }) %>
+
+      <main class="col-md-10 ms-sm-auto main-content p-4">
+        <h2 class="mb-4"><%= doc ? 'Edit' : 'New' %> Knowledge Base Article</h2>
+
+        <div class="card">
+          <div class="card-body">
+            <form action="<%= doc ? '/admin/kb/' + doc.id : '/admin/kb' %>?token=<%= token %>" method="POST">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Title</label>
+                  <input type="text" name="title" class="form-control" value="<%= doc ? doc.title : '' %>" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Slug</label>
+                  <input type="text" name="slug" class="form-control" value="<%= doc ? doc.slug : '' %>" placeholder="auto-generated if empty">
+                </div>
+                <div class="col-md-2 mb-3">
+                  <label class="form-label">Language</label>
+                  <select name="language" class="form-select">
+                    <option value="en" <%= doc && doc.language === 'en' ? 'selected' : '' %>>English</option>
+                    <option value="es" <%= doc && doc.language === 'es' ? 'selected' : '' %>>Spanish</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Content</label>
+                <textarea name="content" class="form-control" rows="15" required><%= doc ? doc.content : '' %></textarea>
+                <small class="text-muted">Use markdown formatting. Content will be chunked and embedded for semantic search.</small>
+              </div>
+
+              <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary" data-bs-toggle="tooltip" title="<%= doc ? 'Update this article' : 'Create new article' %>">
+                  <i class="bi bi-check"></i> <%= doc ? 'Update' : 'Create' %> Article
+                </button>
+                <a href="/SalonSales/admin/kb?token=<%= token %>" class="btn btn-secondary" data-bs-toggle="tooltip" title="Cancel and return to knowledge base">Cancel</a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) });
+  </script>
+</body>
+</html>

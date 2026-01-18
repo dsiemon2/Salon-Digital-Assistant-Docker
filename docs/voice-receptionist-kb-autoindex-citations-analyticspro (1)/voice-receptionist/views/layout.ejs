@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Voice Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background:#0b1020; color:#e6e9f2; }
+      header { background:#11183a; padding: 16px 20px; display:flex; justify-content:space-between; align-items:center; }
+      a { color:#9bd; text-decoration:none; }
+      .container { padding: 20px; max-width: 960px; margin: 0 auto; }
+      .card { background:#121a3b; border:1px solid #1e2a62; border-radius: 12px; padding: 16px; margin-bottom:16px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+      input, textarea { width: 100%; padding: 10px; border-radius:8px; border:1px solid #2a3975; background:#0f1634; color:#e6e9f2; }
+      label { display:block; margin: 8px 0 6px; font-weight:600; }
+      .btn { display:inline-block; padding:10px 14px; border-radius:8px; background:#2a7; color:#04121a; font-weight:700; border:0; cursor:pointer; }
+      .btn.secondary { background:#2a3975; color:#dfe5ff; }
+      table { width:100%; border-collapse: collapse; }
+      th, td { padding:10px; border-bottom:1px solid #1e2a62; text-align:left; }
+      nav a { margin-right: 14px; }
+      small.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color:#a7b1e1; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div><strong>Digital Voice Receptionist — Admin</strong></div>
+      <nav>
+        <a href="/admin?token=<%= token %>">Home</a>
+        <a href="/admin/hours?token=<%= token %>">Hours</a>
+        <a href="/admin/departments?token=<%= token %>">Departments</a>
+        <a href="/admin/calls?token=<%= token %>">Call Logs</a>
+        <a href="/admin/analytics?token=<%= token %>">Analytics</a>
+        <a href="/admin/kb?token=<%= token %>">Knowledge</a>
+        <a href="/admin/analytics-pro?token=<%= token %>">KB & Deflection</a>
+      </nav>
+    </header>
+    <div class="container">
+      <%- body %>
+    </div>
+  </body>
+</html>

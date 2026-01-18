@@ -1,0 +1,550 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// SALON SERVICES
+// ============================================
+
+model Service {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  description     String?
+  category        String   @default("general") // cut, color, treatment, styling, other
+  price           Decimal  @default(0)
+  priceVaries     Boolean  @default(false) // If true, price shown as "from $X"
+  duration        Int      @default(30) // Duration in minutes
+  active          Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  appointments    Appointment[]
+  stylistServices StylistService[]
+}
+
+// ============================================
+// STYLISTS
+// ============================================
+
+model Stylist {
+  id              String   @id @default(cuid())
+  name            String
+  phone           String?
+  email           String?
+  bio             String?
+  specialties     String?  // JSON array of specialties
+  imageUrl        String?
+  active          Boolean  @default(true)
+  acceptingNew    Boolean  @default(true) // Accepting new clients
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  appointments    Appointment[]
+  availability    StylistAvailability[]
+  services        StylistService[]
+}
+
+model StylistAvailability {
+  id          String   @id @default(cuid())
+  stylistId   String
+  stylist     Stylist  @relation(fields: [stylistId], references: [id], onDelete: Cascade)
+  dayOfWeek   Int      // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime   String   // "09:00"
+  endTime     String   // "17:00"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([stylistId, dayOfWeek])
+}
+
+model StylistService {
+  id          String   @id @default(cuid())
+  stylistId   String
+  stylist     Stylist  @relation(fields: [stylistId], references: [id], onDelete: Cascade)
+  serviceId   String
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  customPrice Decimal? // Override price for this stylist
+  createdAt   DateTime @default(now())
+
+  @@unique([stylistId, serviceId])
+}
+
+// ============================================
+// APPOINTMENTS
+// ============================================
+
+model Appointment {
+  id              String   @id @default(cuid())
+  serviceId       String
+  service         Service  @relation(fields: [serviceId], references: [id])
+  stylistId       String?
+  stylist         Stylist? @relation(fields: [stylistId], references: [id])
+  customerName    String
+  customerPhone   String
+  customerEmail   String?
+  appointmentDate DateTime
+  duration        Int      // Duration in minutes
+  status          String   @default("confirmed") // confirmed, completed, cancelled, no_show
+  notes           String?
+  addOns          String?  // JSON array of add-on services
+  confirmationCode String  @unique
+  reminderSent    Boolean  @default(false)
+  callLogId       String?
+  callLog         CallLog? @relation(fields: [callLogId], references: [id])
+  cancelledAt     DateTime?
+  cancelReason    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// CALL LOGS & MESSAGING
+// ============================================
+
+model CallLog {
+  id            String   @id @default(cuid())
+  callSid       String   @unique
+  fromNumber    String
+  toNumber      String
+  callerName    String?  // Optional: name of caller
+  duration      Int?     // Call duration in seconds
+  startedAt     DateTime @default(now())
+  endedAt       DateTime?
+  outcome       String?  // completed, voicemail, transferred, appointment_booked, appointment_cancelled
+  createdAt     DateTime @default(now())
+  transcripts   Transcript[]
+  messages      Message[]
+  intents       IntentLog[]
+  appointments  Appointment[]
+  citations     CitationsLog[]
+}
+
+model Transcript {
+  id        String   @id @default(cuid())
+  callLogId String
+  callLog   CallLog  @relation(fields: [callLogId], references: [id])
+  text      String
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  callLogId String
+  callLog   CallLog  @relation(fields: [callLogId], references: [id])
+  type      String   @default("general") // voicemail, callback_request, general
+  subject   String?
+  body      String
+  notified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model IntentLog {
+  id        String   @id @default(cuid())
+  callLogId String?
+  callLog   CallLog? @relation(fields: [callLogId], references: [id])
+  intent    String   // booking, reschedule, cancel, pricing, hours, location, stylist_info, add_on, transfer, other
+  meta      String   @default("{}")
+  createdAt DateTime @default(now())
+}
+
+// ============================================
+// CONFIGURATION
+// ============================================
+
+model BusinessConfig {
+  id                  String   @id @default(cuid())
+  salonName           String   @default("XYZ Salon")
+  hoursJson           String   @default("{\"Tuesday\": \"9:00 AM - 7:00 PM\", \"Wednesday\": \"9:00 AM - 7:00 PM\", \"Thursday\": \"9:00 AM - 7:00 PM\", \"Friday\": \"9:00 AM - 7:00 PM\", \"Saturday\": \"9:00 AM - 7:00 PM\"}")
+  closedDays          String   @default("[\"Sunday\", \"Monday\"]") // JSON array of closed days
+  address             String   @default("123 Main Street, City, State 12345")
+  landmark            String?  // "next to [landmark]"
+  phone               String?
+  website             String?
+  cancellationPolicy  Int      @default(24) // Hours notice required for cancellation
+  kbMinConfidence     Float    @default(0.55)
+  lowConfidenceAction String   @default("ask_clarify") // ask_clarify | transfer | voicemail
+  selectedVoice       String   @default("shimmer") // alloy, ash, ballad, coral, echo, sage, shimmer, verse
+  greeting            String   @default("Thank you for calling XYZ Salon, this is your virtual receptionist. How may I help you today?")
+  greetingBusy        String   @default("Thanks for calling XYZ Salon. Our stylists are currently with guests, but I can help you right away — what do you need today?")
+  closingMessage      String   @default("Thank you for calling XYZ Salon! We look forward to seeing you soon. Have a beautiful day!")
+  endingEnabled       Boolean  @default(true)
+  endingMessage       String   @default("Thank you for calling XYZ Salon! We look forward to seeing you soon. Have a beautiful day!")
+  updatedAt           DateTime @updatedAt
+}
+
+model SupportedLanguage {
+  id        String   @id @default(cuid())
+  code      String   @unique  // en, es, de, zh, vi, etc.
+  name      String            // English, Spanish, German, etc.
+  nativeName String           // English, Español, Deutsch, etc.
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  phone     String
+  createdAt DateTime @default(now())
+}
+
+// ============================================
+// AI SCRIPTS & RESPONSES
+// ============================================
+
+model AiScript {
+  id          String   @id @default(cuid())
+  category    String   // greeting, booking, reschedule, cancel, pricing, hours, location, stylist, add_on, edge_case, closing
+  name        String   @unique
+  title       String
+  content     String   // The actual script/response text
+  variables   String   @default("[]") // JSON array of variables like ["salonName", "serviceName"]
+  isDefault   Boolean  @default(false)
+  enabled     Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// KNOWLEDGE BASE (for FAQs and custom responses)
+// ============================================
+
+model KnowledgeDoc {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  language  String   @default("en")
+  content   String
+  createdAt DateTime @default(now())
+  chunks    KnowledgeChunk[]
+}
+
+model KnowledgeChunk {
+  id        String       @id @default(cuid())
+  docId     String
+  doc       KnowledgeDoc @relation(fields: [docId], references: [id], onDelete: Cascade)
+  index     Int
+  text      String
+  embedding String       // JSON array of numbers
+  createdAt DateTime     @default(now())
+}
+
+model CitationsLog {
+  id        String   @id @default(cuid())
+  callLogId String?
+  callLog   CallLog? @relation(fields: [callLogId], references: [id])
+  callSid   String?
+  question  String
+  language  String
+  sources   String   // JSON array: [{title, score}]
+  createdAt DateTime @default(now())
+}
+
+model LanguageLog {
+  id        String   @id @default(cuid())
+  callSid   String?
+  language  String
+  createdAt DateTime @default(now())
+}
+
+// ============================================
+// ADD-ON SERVICES
+// ============================================
+
+model AddOn {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  price       Decimal  @default(0)
+  duration    Int      @default(15) // Additional minutes
+  suggestFor  String   @default("[]") // JSON array of service categories to suggest this for
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// WEBHOOKS CONFIGURATION
+// ============================================
+
+model Webhook {
+  id          String   @id @default(cuid())
+  name        String   @unique  // call_started, call_ended, appointment_booked, appointment_cancelled, callback_request
+  url         String
+  enabled     Boolean  @default(true)
+  secret      String?  // Optional secret for signature verification
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// SMS CONFIGURATION
+// ============================================
+
+model SmsConfig {
+  id                        String   @id @default(cuid())
+  enabled                   Boolean  @default(true)
+  fromNumber                String?  // Override Twilio number
+  appointmentConfirmation   Boolean  @default(true)
+  appointmentReminder       Boolean  @default(true)
+  reminderHoursBefore       Int      @default(24) // Hours before appointment to send reminder
+  cancellationConfirmation  Boolean  @default(true)
+  voicemailNotification     Boolean  @default(true)
+  adminAlertNumber          String?  // Phone to receive admin alerts
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}
+
+model SmsTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique  // appointment_confirmation, appointment_reminder, cancellation_confirmation, voicemail_notification
+  template  String   // Template with placeholders like {{customerName}}, {{serviceName}}, {{appointmentDate}}
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// TRANSFER CONFIGURATION
+// ============================================
+
+model TransferConfig {
+  id                    String   @id @default(cuid())
+  enabled               Boolean  @default(true)
+  defaultTransferNumber String?  // Default number to transfer to
+  transferMessage       String   @default("No problem — I'll connect you with a team member. One moment…")
+  noAnswerMessage       String   @default("It looks like all staff are currently assisting other guests. Would you like to leave a quick message, or should I text them to call you back?")
+  voicemailEnabled      Boolean  @default(true)
+  voicemailNumber       String?  // Voicemail box number
+  voicemailGreeting     String   @default("Please leave a message after the tone and we'll get back to you as soon as possible.")
+  maxWaitTime           Int      @default(30) // Seconds before going to voicemail
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model TransferRoute {
+  id          String   @id @default(cuid())
+  name        String   @unique  // front_desk, manager, emergency
+  phoneNumber String
+  description String?
+  schedule    String?  // JSON: business hours when this route is available
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// DTMF MENU CONFIGURATION
+// ============================================
+
+model DtmfMenu {
+  id          String   @id @default(cuid())
+  enabled     Boolean  @default(true)
+  greeting    String   @default("Press 1 to book an appointment, Press 2 for pricing information, Press 3 for hours and location, Press 0 to speak with someone.")
+  timeoutSecs Int      @default(5)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DtmfOption {
+  id          String   @id @default(cuid())
+  digit       String   @unique  // 0-9, *, #
+  label       String   // "Book Appointment", "Pricing Info", etc.
+  action      String   // say, transfer, voicemail, ai_intent
+  actionValue String?  // Text to say, phone to transfer to, or intent to trigger
+  enabled     Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// AI TOOLS CONFIGURATION
+// ============================================
+
+model AiTool {
+  id          String   @id @default(cuid())
+  name        String   @unique  // bookAppointment, rescheduleAppointment, cancelAppointment, getServicePricing, etc.
+  displayName String   // "Book Appointment", "Get Pricing"
+  description String
+  enabled     Boolean  @default(true)
+  category    String   @default("general") // general, booking, info
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// AI AGENTS CONFIGURATION
+// ============================================
+
+model AiAgent {
+  id            String   @id @default(cuid())
+  name          String   @unique  // main, spanish
+  displayName   String   // "Main Receptionist", "Spanish Receptionist"
+  voice         String   @default("shimmer")
+  language      String   @default("en")
+  systemPrompt  String   // Custom system prompt for this agent
+  greeting      String?  // Custom greeting
+  tools         String   @default("[]") // JSON array of enabled tool names
+  isDefault     Boolean  @default(false)
+  enabled       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ============================================
+// LOGIC SPLIT CONFIGURATION
+// ============================================
+
+model LogicRule {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  condition   String   // JSON: {field, operator, value}
+  action      String   // transfer_agent, transfer_phone, play_message, set_variable
+  actionValue String   // Agent ID, phone number, message text, or variable JSON
+  priority    Int      @default(0) // Lower = higher priority
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================
+// CALENDAR CONFIGURATION
+// ============================================
+
+model CalendarConfig {
+  id              String   @id @default(cuid())
+  provider        String   @default("internal") // internal, google, outlook
+  enabled         Boolean  @default(true)
+  apiKey          String?  // API key or OAuth credentials
+  calendarId      String?  // Calendar ID for booking
+  clientId        String?  // OAuth client ID
+  clientSecret    String?  // OAuth client secret
+  refreshToken    String?  // OAuth refresh token
+  webhookUrl      String?  // Webhook for real-time updates
+  defaultDuration Int      @default(30) // Default appointment duration in minutes
+  bufferTime      Int      @default(15) // Buffer between appointments
+  workingHours    String   @default("{\"Tuesday\": {\"start\": \"09:00\", \"end\": \"19:00\"}, \"Wednesday\": {\"start\": \"09:00\", \"end\": \"19:00\"}, \"Thursday\": {\"start\": \"09:00\", \"end\": \"19:00\"}, \"Friday\": {\"start\": \"09:00\", \"end\": \"19:00\"}, \"Saturday\": {\"start\": \"09:00\", \"end\": \"19:00\"}}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// CUSTOM FUNCTIONS CONFIGURATION
+// ============================================
+
+model CustomFunction {
+  id              String   @id @default(cuid())
+  name            String   @unique  // Function name (no spaces)
+  displayName     String   // Human-readable name
+  description     String   // Description for LLM
+  type            String   @default("custom") // calendar_check, calendar_book, custom
+  endpoint        String?  // API endpoint URL
+  method          String   @default("POST") // HTTP method
+  timeout         Int      @default(120000) // Timeout in milliseconds
+  headers         String   @default("{}") // JSON: {"Authorization": "Bearer xxx"}
+  queryParams     String   @default("{}") // JSON: {"key": "value"}
+  parameters      String   @default("{}") // JSON Schema for LLM parameters
+  payloadType     String   @default("args_only") // args_only, full_context, custom
+  customPayload   String?  // Custom payload template
+  responseMapping String?  // JSON: how to map API response
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// BRANDING & SETTINGS
+// ============================================
+
+model Branding {
+  id              String   @id @default(cuid())
+  logoUrl         String   @default("")
+  faviconUrl      String   @default("")
+  primaryColor    String   @default("#db2777") // Pink
+  secondaryColor  String   @default("#be185d")
+  accentColor     String   @default("#ec4899")
+  headingFont     String   @default("Inter")
+  bodyFont        String   @default("Inter")
+  updatedAt       DateTime @updatedAt
+}
+
+model StoreInfo {
+  id              String   @id @default(cuid())
+  businessName    String   @default("Salon Digital Assistant")
+  tagline         String   @default("Beauty & Style Experts")
+  description     String   @default("AI-powered salon booking assistant")
+  address         String   @default("")
+  phone           String   @default("")
+  email           String   @default("")
+  website         String   @default("")
+  businessHours   String   @default("")
+  timezone        String   @default("America/New_York")
+  updatedAt       DateTime @updatedAt
+}
+
+model Features {
+  id                      String   @id @default(cuid())
+  faqEnabled              Boolean  @default(false)
+  stickyBarEnabled        Boolean  @default(false)
+  stickyBarText           String   @default("")
+  stickyBarBgColor        String   @default("#db2777")
+  stickyBarLink           String   @default("")
+  stickyBarLinkText       String   @default("")
+  liveChatEnabled         Boolean  @default(false)
+  chatProvider            String   @default("builtin")
+  chatWelcomeMessage      String   @default("Hi! How can we help you today?")
+  chatAgentName           String   @default("Support")
+  chatWidgetColor         String   @default("#db2777")
+  chatPosition            String   @default("bottom-right")
+  chatShowOnMobile        Boolean  @default(true)
+  chatWidgetId            String   @default("")
+  chatEmbedCode           String   @default("")
+  emailNotifications      Boolean  @default(true)
+  smsNotifications        Boolean  @default(false)
+  pushNotifications       Boolean  @default(false)
+  orderConfirmations      Boolean  @default(true)
+  marketingEmails         Boolean  @default(false)
+  appointmentReminders    Boolean  @default(true)
+  facebookEnabled         Boolean  @default(false)
+  facebookUrl             String   @default("")
+  twitterEnabled          Boolean  @default(false)
+  twitterUrl              String   @default("")
+  instagramEnabled        Boolean  @default(false)
+  instagramUrl            String   @default("")
+  linkedinEnabled         Boolean  @default(false)
+  linkedinUrl             String   @default("")
+  youtubeEnabled          Boolean  @default(false)
+  youtubeUrl              String   @default("")
+  tiktokEnabled           Boolean  @default(false)
+  tiktokUrl               String   @default("")
+  shareOnFacebook         Boolean  @default(true)
+  shareOnTwitter          Boolean  @default(true)
+  shareOnLinkedin         Boolean  @default(false)
+  shareOnWhatsapp         Boolean  @default(true)
+  shareOnEmail            Boolean  @default(true)
+  copyLinkButton          Boolean  @default(true)
+  updatedAt               DateTime @updatedAt
+}
+
+model PaymentSettings {
+  id                    String   @id @default(cuid())
+  enabled               Boolean  @default(false)
+  stripeEnabled         Boolean  @default(false)
+  stripePublishableKey  String   @default("")
+  stripeTestMode        Boolean  @default(true)
+  paypalEnabled         Boolean  @default(false)
+  paypalClientId        String   @default("")
+  paypalSandbox         Boolean  @default(true)
+  squareEnabled         Boolean  @default(false)
+  squareAppId           String   @default("")
+  squareSandbox         Boolean  @default(true)
+  updatedAt             DateTime @updatedAt
+}

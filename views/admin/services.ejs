@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Services - Salon Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    .sidebar { min-height: 100vh; background: #2c3e50; }
+    .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .sidebar .nav-link i { margin-right: 0.5rem; }
+    .main-content { background: #f8f9fa; min-height: 100vh; }
+    .nav-divider { border-top: 1px solid rgba(255,255,255,0.2); margin: 0.5rem 0; }
+    .nav-section { color: rgba(255,255,255,0.5); font-size: 0.75rem; padding: 0.5rem 1rem; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <%- include('_sidebar', { token, active: 'services' }) %>
+
+      <main class="col-md-10 ms-sm-auto main-content p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2>Services & Pricing</h2>
+          <span data-bs-toggle="tooltip" title="Add a new service">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#serviceModal" onclick="openServiceModal()">
+              <i class="bi bi-plus-circle"></i> Add Service
+            </button>
+          </span>
+        </div>
+
+        <div class="row">
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">Services</h5>
+              </div>
+              <div class="card-body">
+                <% if (services.length === 0) { %>
+                  <p class="text-muted text-center py-4">No services yet. Add your first service to get started.</p>
+                <% } else { %>
+                  <% const categories = [...new Set(services.map(s => s.category))]; %>
+                  <% categories.forEach(category => { %>
+                    <h6 class="text-uppercase text-muted mt-3 mb-2"><%= category %></h6>
+                    <% services.filter(s => s.category === category).forEach(service => { %>
+                    <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                      <div>
+                        <strong><%= service.name %></strong>
+                        <% if (!service.active) { %><span class="badge bg-secondary ms-2">Inactive</span><% } %>
+                        <% if (service.description) { %>
+                          <br><small class="text-muted"><%= service.description %></small>
+                        <% } %>
+                      </div>
+                      <div class="d-flex align-items-center">
+                        <span class="me-3">
+                          <strong><%= service.priceVaries ? 'From ' : '' %>$<%= service.price %></strong>
+                          <small class="text-muted">/ <%= service.duration %> min</small>
+                        </span>
+                        <div class="btn-group btn-group-sm">
+                          <button class="btn btn-outline-primary" onclick="editService(<%= JSON.stringify(service).replace(/"/g, '&quot;') %>)" data-bs-toggle="tooltip" title="Edit this service">
+                            <i class="bi bi-pencil"></i>
+                          </button>
+                          <button class="btn btn-outline-danger" onclick="deleteService('<%= service.id %>')" data-bs-toggle="tooltip" title="Delete this service">
+                            <i class="bi bi-trash"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <% }); %>
+                  <% }); %>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Add-Ons</h5>
+                <span data-bs-toggle="tooltip" title="Add a new add-on service">
+                  <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addOnModal" onclick="openAddOnModal()">
+                    <i class="bi bi-plus"></i>
+                  </button>
+                </span>
+              </div>
+              <div class="card-body">
+                <% if (addOns.length === 0) { %>
+                  <p class="text-muted small">No add-ons yet. Add-ons can be suggested during booking.</p>
+                <% } else { %>
+                  <% addOns.forEach(addon => { %>
+                  <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                    <div>
+                      <strong><%= addon.name %></strong><br>
+                      <small class="text-muted">+$<%= addon.price %> / +<%= addon.duration %> min</small>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteAddOn('<%= addon.id %>')" data-bs-toggle="tooltip" title="Delete this add-on">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                  <% }); %>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Service Modal -->
+  <div class="modal fade" id="serviceModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="serviceForm">
+          <div class="modal-header">
+            <h5 class="modal-title" id="serviceModalTitle">Add Service</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" name="id" id="serviceId">
+            <div class="mb-3">
+              <label class="form-label">Service Name *</label>
+              <input type="text" name="name" id="serviceName" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              <textarea name="description" id="serviceDesc" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Category</label>
+              <select name="category" id="serviceCategory" class="form-select">
+                <option value="cut">Cut</option>
+                <option value="color">Color</option>
+                <option value="treatment">Treatment</option>
+                <option value="styling">Styling</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="row">
+              <div class="col-6">
+                <div class="mb-3">
+                  <label class="form-label">Price ($) *</label>
+                  <input type="number" name="price" id="servicePrice" class="form-control" min="0" step="0.01" required>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="mb-3">
+                  <label class="form-label">Duration (min) *</label>
+                  <input type="number" name="duration" id="serviceDuration" class="form-control" min="5" step="5" value="30" required>
+                </div>
+              </div>
+            </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" name="priceVaries" id="servicePriceVaries">
+              <label class="form-check-label" for="servicePriceVaries">
+                Price varies (show as "from $X")
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="active" id="serviceActive" checked>
+              <label class="form-check-label" for="serviceActive">Active</label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-bs-toggle="tooltip" title="Close without saving">Cancel</button>
+            <button type="submit" class="btn btn-primary" data-bs-toggle="tooltip" title="Save this service">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add-On Modal -->
+  <div class="modal fade" id="addOnModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="addOnForm">
+          <div class="modal-header">
+            <h5 class="modal-title">Add Add-On Service</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Name *</label>
+              <input type="text" name="name" id="addOnName" class="form-control" required placeholder="e.g., Deep Conditioning Treatment">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              <textarea name="description" id="addOnDesc" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="row">
+              <div class="col-6">
+                <div class="mb-3">
+                  <label class="form-label">Price ($)</label>
+                  <input type="number" name="price" id="addOnPrice" class="form-control" min="0" step="0.01" value="15">
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="mb-3">
+                  <label class="form-label">Extra Time (min)</label>
+                  <input type="number" name="duration" id="addOnDuration" class="form-control" min="0" step="5" value="15">
+                </div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Suggest for categories</label>
+              <div class="form-check">
+                <input class="form-check-input suggest-for" type="checkbox" value="color">
+                <label class="form-check-label">Color Services</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input suggest-for" type="checkbox" value="cut">
+                <label class="form-check-label">Cut Services</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input suggest-for" type="checkbox" value="styling">
+                <label class="form-check-label">Styling Services</label>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-bs-toggle="tooltip" title="Close without saving">Cancel</button>
+            <button type="submit" class="btn btn-primary" data-bs-toggle="tooltip" title="Save this add-on">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) });
+  </script>
+  <script>
+    const token = '<%= token %>';
+
+    function openServiceModal(service = null) {
+      document.getElementById('serviceModalTitle').textContent = service ? 'Edit Service' : 'Add Service';
+      document.getElementById('serviceId').value = service?.id || '';
+      document.getElementById('serviceName').value = service?.name || '';
+      document.getElementById('serviceDesc').value = service?.description || '';
+      document.getElementById('serviceCategory').value = service?.category || 'cut';
+      document.getElementById('servicePrice').value = service?.price || '';
+      document.getElementById('serviceDuration').value = service?.duration || 30;
+      document.getElementById('servicePriceVaries').checked = service?.priceVaries || false;
+      document.getElementById('serviceActive').checked = service?.active !== false;
+    }
+
+    function editService(service) {
+      openServiceModal(service);
+      new bootstrap.Modal(document.getElementById('serviceModal')).show();
+    }
+
+    document.getElementById('serviceForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+
+      const res = await fetch('/admin/services?token=' + token, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(Object.fromEntries(formData))
+      });
+
+      if (res.ok) {
+        location.reload();
+      } else {
+        alert('Failed to save service');
+      }
+    });
+
+    async function deleteService(id) {
+      if (!confirm('Delete this service?')) return;
+      await fetch('/admin/services/' + id + '/delete?token=' + token, { method: 'POST' });
+      location.reload();
+    }
+
+    function openAddOnModal() {
+      document.getElementById('addOnName').value = '';
+      document.getElementById('addOnDesc').value = '';
+      document.getElementById('addOnPrice').value = '15';
+      document.getElementById('addOnDuration').value = '15';
+      document.querySelectorAll('.suggest-for').forEach(cb => cb.checked = false);
+    }
+
+    document.getElementById('addOnForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const suggestFor = Array.from(document.querySelectorAll('.suggest-for:checked')).map(cb => cb.value);
+
+      const res = await fetch('/admin/addons?token=' + token, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: document.getElementById('addOnName').value,
+          description: document.getElementById('addOnDesc').value,
+          price: document.getElementById('addOnPrice').value,
+          duration: document.getElementById('addOnDuration').value,
+          suggestFor: JSON.stringify(suggestFor),
+          active: 'on'
+        })
+      });
+
+      if (res.ok) {
+        location.reload();
+      } else {
+        alert('Failed to save add-on');
+      }
+    });
+
+    async function deleteAddOn(id) {
+      if (!confirm('Delete this add-on?')) return;
+      await fetch('/admin/addons/' + id + '/delete?token=' + token, { method: 'POST' });
+      location.reload();
+    }
+  </script>
+</body>
+</html>

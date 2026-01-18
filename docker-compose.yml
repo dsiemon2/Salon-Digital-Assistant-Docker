@@ -1,0 +1,99 @@
+# =====================================================
+# Salon Digital Assistant Docker Configuration
+#
+# Access:
+#   - http://localhost:8083/SalonSales/           -> Main App (Chat Interface)
+#   - http://localhost:8083/SalonSales/admin      -> Admin Panel (add ?token=YOUR_TOKEN)
+#   - http://localhost:8083/SalonSales/ws/chat    -> WebSocket endpoint
+#
+# All internal services are NOT exposed to the host.
+# Only nginx (port 8083) is accessible from outside.
+# =====================================================
+
+networks:
+  salon_net:
+    driver: bridge
+
+volumes:
+  app_data_salon:
+    name: salon_data
+
+services:
+  # ===========================================
+  # NGINX - Reverse Proxy (ONLY EXPOSED PORT)
+  # ===========================================
+  nginx:
+    image: nginx:alpine
+    container_name: salon_proxy
+    ports:
+      - "8083:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+    networks:
+      - salon_net
+    restart: unless-stopped
+
+  # ===========================================
+  # MAIN APP - Chat Interface (Internal Only)
+  # ===========================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: salon_app
+    # NO PORTS EXPOSED - only nginx can reach it
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=file:/app/data/app.db
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DEFAULT_VOICE=${DEFAULT_VOICE:-shimmer}
+    volumes:
+      - app_data_salon:/app/data
+    networks:
+      - salon_net
+    restart: unless-stopped
+    command: ["node", "dist/server.js"]
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ===========================================
+  # ADMIN - Admin Panel (Internal Only)
+  # ===========================================
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: salon_admin
+    # NO PORTS EXPOSED - only nginx can reach it
+    # Wait for app to be healthy (database initialized) before starting
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - ADMIN_PORT=3001
+      - DATABASE_URL=file:/app/data/app.db
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-admin}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - app_data_salon:/app/data
+    networks:
+      - salon_net
+    restart: unless-stopped
+    command: ["node", "dist/adminServer.js"]
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

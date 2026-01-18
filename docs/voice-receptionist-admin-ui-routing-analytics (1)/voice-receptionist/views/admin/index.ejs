@@ -1,0 +1,25 @@
+<% layout('layout', { token }) %>
+<div class="card">
+  <h2>Business Profile</h2>
+  <p><strong>Address:</strong> <%= cfg?.address || '—' %></p>
+  <p><strong>Hours (JSON):</strong></p>
+  <pre class="card"><code><%= (cfg?.hoursJson || '{}') %></code></pre>
+  <p><a class="btn secondary" href="/admin/hours?token=<%= token %>">Edit Hours</a></p>
+</div>
+
+<div class="card">
+  <h2>Departments</h2>
+  <% if (depts?.length) { %>
+    <table>
+      <thead><tr><th>Name</th><th>Phone</th></tr></thead>
+      <tbody>
+        <% depts.forEach(d => { %>
+          <tr><td><%= d.name %></td><td><%= d.phone %></td></tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } else { %>
+    <p>No departments configured yet.</p>
+  <% } %>
+  <p><a class="btn secondary" href="/admin/departments?token=<%= token %>">Manage Departments</a></p>
+</div>

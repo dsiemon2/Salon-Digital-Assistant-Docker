@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= stylist ? 'Edit' : 'Add' %> Stylist - Salon Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    .sidebar { min-height: 100vh; background: #2c3e50; }
+    .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .sidebar .nav-link i { margin-right: 0.5rem; }
+    .main-content { background: #f8f9fa; min-height: 100vh; }
+    .nav-divider { border-top: 1px solid rgba(255,255,255,0.2); margin: 0.5rem 0; }
+    .nav-section { color: rgba(255,255,255,0.5); font-size: 0.75rem; padding: 0.5rem 1rem; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <%- include('_sidebar', { token, active: 'stylists' }) %>
+
+      <main class="col-md-10 ms-sm-auto main-content p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2><%= stylist ? 'Edit' : 'Add' %> Stylist</h2>
+          <a href="/SalonSales/admin/stylists?token=<%= token %>" class="btn btn-outline-secondary" data-bs-toggle="tooltip" title="Return to stylists list">
+            <i class="bi bi-arrow-left"></i> Back
+          </a>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <form method="POST" action="/SalonSales/admin/stylists<%= stylist ? '/' + stylist.id : '' %>?token=<%= token %>">
+              <div class="row">
+                <div class="col-md-6">
+                  <h5 class="mb-3">Basic Information</h5>
+
+                  <div class="mb-3">
+                    <label class="form-label">Name *</label>
+                    <input type="text" name="name" class="form-control" value="<%= stylist ? stylist.name : '' %>" required>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label">Phone</label>
+                    <input type="tel" name="phone" class="form-control" value="<%= stylist ? stylist.phone : '' %>">
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" value="<%= stylist ? stylist.email : '' %>">
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label">Bio</label>
+                    <textarea name="bio" class="form-control" rows="3"><%= stylist ? stylist.bio : '' %></textarea>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label">Specialties (comma-separated)</label>
+                    <input type="text" name="specialties" class="form-control"
+                           value="<%= stylist && stylist.specialties ? JSON.parse(stylist.specialties).join(', ') : '' %>"
+                           placeholder="e.g., Balayage, Men's cuts, Color correction">
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <h5 class="mb-3">Services & Availability</h5>
+
+                  <div class="mb-3">
+                    <label class="form-label">Services Offered</label>
+                    <% services.forEach(service => { %>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="services" value="<%= service.id %>"
+                             id="service_<%= service.id %>"
+                             <%= stylist && stylist.services && stylist.services.find(s => s.serviceId === service.id) ? 'checked' : '' %>>
+                      <label class="form-check-label" for="service_<%= service.id %>">
+                        <%= service.name %> ($<%= service.price %>)
+                      </label>
+                    </div>
+                    <% }); %>
+                  </div>
+
+                  <div class="mb-3">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" name="active" id="active"
+                             <%= !stylist || stylist.active ? 'checked' : '' %>>
+                      <label class="form-check-label" for="active">Active (visible to callers)</label>
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" name="acceptingNew" id="acceptingNew"
+                             <%= !stylist || stylist.acceptingNew ? 'checked' : '' %>>
+                      <label class="form-check-label" for="acceptingNew">Accepting new clients</label>
+                    </div>
+                  </div>
+
+                  <h6 class="mt-4">Weekly Availability</h6>
+                  <div id="availability-container">
+                    <% const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']; %>
+                    <% days.forEach((day, idx) => { %>
+                      <% const avail = stylist && stylist.availability ? stylist.availability.find(a => a.dayOfWeek === idx) : null; %>
+                      <div class="row mb-2 align-items-center">
+                        <div class="col-3">
+                          <div class="form-check">
+                            <input class="form-check-input day-toggle" type="checkbox" id="day_<%= idx %>" data-day="<%= idx %>"
+                                   <%= avail ? 'checked' : '' %>>
+                            <label class="form-check-label" for="day_<%= idx %>"><%= day %></label>
+                          </div>
+                        </div>
+                        <div class="col-4">
+                          <input type="time" class="form-control form-control-sm" id="start_<%= idx %>"
+                                 value="<%= avail ? avail.startTime : '09:00' %>" <%= avail ? '' : 'disabled' %>>
+                        </div>
+                        <div class="col-1 text-center">to</div>
+                        <div class="col-4">
+                          <input type="time" class="form-control form-control-sm" id="end_<%= idx %>"
+                                 value="<%= avail ? avail.endTime : '17:00' %>" <%= avail ? '' : 'disabled' %>>
+                        </div>
+                      </div>
+                    <% }); %>
+                  </div>
+                  <input type="hidden" name="availability" id="availability-json">
+                </div>
+              </div>
+
+              <hr>
+
+              <div class="d-flex justify-content-between">
+                <% if (stylist) { %>
+                <button type="button" class="btn btn-outline-danger" onclick="deleteStylist()" data-bs-toggle="tooltip" title="Delete this stylist">
+                  <i class="bi bi-trash"></i> Delete
+                </button>
+                <% } else { %>
+                <div></div>
+                <% } %>
+                <button type="submit" class="btn btn-primary" data-bs-toggle="tooltip" title="<%= stylist ? 'Save changes to this stylist' : 'Add this stylist' %>">
+                  <i class="bi bi-check"></i> <%= stylist ? 'Save Changes' : 'Add Stylist' %>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) });
+
+    // Handle day toggles
+    document.querySelectorAll('.day-toggle').forEach(toggle => {
+      toggle.addEventListener('change', function() {
+        const day = this.dataset.day;
+        document.getElementById('start_' + day).disabled = !this.checked;
+        document.getElementById('end_' + day).disabled = !this.checked;
+      });
+    });
+
+    // Build availability JSON before submit
+    document.querySelector('form').addEventListener('submit', function(e) {
+      const availability = [];
+      for (let i = 0; i < 7; i++) {
+        if (document.getElementById('day_' + i).checked) {
+          availability.push({
+            dayOfWeek: i,
+            startTime: document.getElementById('start_' + i).value,
+            endTime: document.getElementById('end_' + i).value
+          });
+        }
+      }
+      document.getElementById('availability-json').value = JSON.stringify(availability);
+    });
+
+    <% if (stylist) { %>
+    function deleteStylist() {
+      if (confirm('Are you sure you want to delete this stylist?')) {
+        fetch('/admin/stylists/<%= stylist.id %>/delete?token=<%= token %>', { method: 'POST' })
+          .then(() => window.location = '/admin/stylists?token=<%= token %>');
+      }
+    }
+    <% } %>
+  </script>
+</body>
+</html>

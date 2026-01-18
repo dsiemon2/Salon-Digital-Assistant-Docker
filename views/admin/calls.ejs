@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Call Logs - Salon Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    .sidebar { min-height: 100vh; background: #2c3e50; }
+    .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .sidebar .nav-link i { margin-right: 0.5rem; }
+    .main-content { background: #f8f9fa; min-height: 100vh; }
+    .nav-divider { border-top: 1px solid rgba(255,255,255,0.2); margin: 0.5rem 0; }
+    .nav-section { color: rgba(255,255,255,0.5); font-size: 0.75rem; padding: 0.5rem 1rem; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <%- include('_sidebar', { token, active: 'calls' }) %>
+
+      <main class="col-md-10 ms-sm-auto main-content p-4">
+        <h2 class="mb-4">Call Logs</h2>
+
+        <div class="card">
+          <div class="card-body">
+            <table class="table table-hover" id="callsTable">
+              <thead>
+                <tr>
+                  <th>Call SID</th>
+                  <th>Caller</th>
+                  <th>Phone</th>
+                  <th>Duration</th>
+                  <th>Outcome</th>
+                  <th>Tickets</th>
+                  <th>Messages</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% calls.forEach(call => { %>
+                <tr onclick="highlightRow(event)">
+                  <td><code><%= call.callSid ? call.callSid.substring(0, 12) + '...' : 'N/A' %></code></td>
+                  <td><%= call.callerName || 'Unknown' %></td>
+                  <td><%= call.fromNumber || '-' %></td>
+                  <td><%= call.duration ? Math.round(call.duration / 60) + 'm ' + (call.duration % 60) + 's' : '-' %></td>
+                  <td>
+                    <span class="badge bg-<%= call.outcome === 'completed' ? 'success' : call.outcome === 'failed' ? 'danger' : 'secondary' %>">
+                      <%= call.outcome || 'pending' %>
+                    </span>
+                  </td>
+                  <td><span class="badge bg-info"><%= call.tickets ? call.tickets.reduce((sum, t) => sum + (t.quantity || 0), 0) : 0 %></span></td>
+                  <td><span class="badge bg-secondary"><%= call.messages ? call.messages.length : 0 %></span></td>
+                  <td><%= new Date(call.createdAt).toLocaleString() %></td>
+                </tr>
+                <% }); %>
+              </tbody>
+            </table>
+
+            <% if (calls.length === 0) { %>
+              <p class="text-muted text-center">No call logs yet</p>
+            <% } %>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) });
+  </script>
+  <%- include('../partials/grid-helpers') %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      initGrid('callsTable', { perPage: 10 });
+    });
+  </script>
+</body>
+</html>

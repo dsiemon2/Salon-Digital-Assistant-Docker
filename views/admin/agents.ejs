@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agents - Salon Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    .sidebar { min-height: 100vh; background: #2c3e50; }
+    .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .sidebar .nav-link i { margin-right: 0.5rem; }
+    .main-content { background: #f8f9fa; min-height: 100vh; }
+    .nav-divider { border-top: 1px solid rgba(255,255,255,0.2); margin: 0.5rem 0; }
+    .nav-section { color: rgba(255,255,255,0.5); font-size: 0.75rem; padding: 0.5rem 1rem; text-transform: uppercase; }
+    .agent-card { transition: all 0.2s; cursor: pointer; }
+    .agent-card:hover { transform: translateY(-2px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); }
+    .agent-card.default { border: 2px solid #0d6efd; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <%- include('_sidebar', { token, active: 'agents' }) %>
+
+      <main class="col-md-10 ms-sm-auto main-content p-4">
+        <h2 class="mb-4"><i class="bi bi-people text-purple me-2"></i>AI Agents (Agent Transfer)</h2>
+
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i>
+          Configure different AI agents with unique personalities, voices, and capabilities. Use Logic Rules to route callers to specific agents.
+        </div>
+
+        <!-- Existing Agents -->
+        <div class="row mb-4">
+          <% agents.forEach(agent => { %>
+          <div class="col-md-4 mb-3">
+            <div class="card agent-card <%= agent.isDefault ? 'default' : '' %>" onclick="editAgent('<%= agent.name %>')">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                  <h5 class="card-title mb-1"><%= agent.displayName %></h5>
+                  <div>
+                    <% if (agent.isDefault) { %>
+                    <span class="badge bg-primary">Default</span>
+                    <% } %>
+                    <span class="badge bg-<%= agent.enabled ? 'success' : 'secondary' %>">
+                      <%= agent.enabled ? 'Active' : 'Disabled' %>
+                    </span>
+                  </div>
+                </div>
+                <code class="small text-muted"><%= agent.name %></code>
+                <div class="mt-2">
+                  <span class="badge bg-light text-dark"><i class="bi bi-volume-up me-1"></i><%= agent.voice %></span>
+                  <span class="badge bg-light text-dark"><i class="bi bi-translate me-1"></i><%= agent.language %></span>
+                </div>
+                <p class="card-text text-muted small mt-2 text-truncate"><%= agent.systemPrompt?.substring(0, 100) %>...</p>
+              </div>
+            </div>
+          </div>
+          <% }) %>
+
+          <% if (agents.length === 0) { %>
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body text-center text-muted">
+                <p class="mb-3">No agents configured yet. Create your first agent below!</p>
+              </div>
+            </div>
+          </div>
+          <% } %>
+        </div>
+
+        <!-- Create/Edit Agent -->
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create/Edit Agent</h5>
+          </div>
+          <div class="card-body">
+            <form id="agentForm">
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Agent ID</label>
+                  <input type="text" class="form-control" id="agentName" name="name" placeholder="main, spanish, sales" required>
+                  <small class="text-muted">Unique identifier (no spaces)</small>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Display Name</label>
+                  <input type="text" class="form-control" id="agentDisplayName" name="displayName" placeholder="Main Assistant" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Voice</label>
+                  <select class="form-select" id="agentVoice" name="voice">
+                    <option value="alloy">Alloy (warm)</option>
+                    <option value="ash">Ash (confident)</option>
+                    <option value="ballad">Ballad (smooth)</option>
+                    <option value="coral">Coral (friendly)</option>
+                    <option value="echo">Echo (crisp)</option>
+                    <option value="sage">Sage (calm)</option>
+                    <option value="shimmer">Shimmer (bright)</option>
+                    <option value="verse">Verse (professional)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Language</label>
+                  <select class="form-select" id="agentLanguage" name="language">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="de">German</option>
+                    <option value="fr">French</option>
+                    <option value="zh">Chinese</option>
+                    <option value="vi">Vietnamese</option>
+                    <option value="other">Other (specify in prompt)</option>
+                  </select>
+                </div>
+                <div class="col-md-4 mb-3 d-flex align-items-end">
+                  <div class="form-check me-3">
+                    <input class="form-check-input" type="checkbox" id="agentEnabled" name="enabled" checked>
+                    <label class="form-check-label" for="agentEnabled">Enabled</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="agentIsDefault" name="isDefault">
+                    <label class="form-check-label" for="agentIsDefault">Set as Default</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">System Prompt</label>
+                <textarea class="form-control" id="agentSystemPrompt" name="systemPrompt" rows="6" required placeholder="You are a helpful assistant for XYZ Salon..."></textarea>
+                <small class="text-muted">Instructions that define this agent's personality and behavior</small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Custom Greeting (optional)</label>
+                <textarea class="form-control" id="agentGreeting" name="greeting" rows="2" placeholder="Hello! Welcome to XYZ Salon..."></textarea>
+                <small class="text-muted">Leave blank to use default greeting</small>
+              </div>
+
+              <div class="d-flex justify-content-between">
+                <button type="submit" class="btn btn-primary" data-bs-toggle="tooltip" title="Save this agent">
+                  <i class="bi bi-save me-2"></i>Save Agent
+                </button>
+                <button type="button" class="btn btn-outline-danger" id="deleteAgentBtn" style="display: none;" onclick="deleteAgent()" data-bs-toggle="tooltip" title="Delete this agent">
+                  <i class="bi bi-trash me-2"></i>Delete Agent
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Agent Transfer Flow -->
+        <div class="card mt-4">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>How Agent Transfer Works</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4 text-center mb-3">
+                <div class="bg-light rounded p-3">
+                  <i class="bi bi-telephone-inbound fs-1 text-primary mb-2 d-block"></i>
+                  <h6>1. Call Received</h6>
+                  <p class="small text-muted mb-0">Caller connects to default agent</p>
+                </div>
+              </div>
+              <div class="col-md-4 text-center mb-3">
+                <div class="bg-light rounded p-3">
+                  <i class="bi bi-diagram-3 fs-1 text-warning mb-2 d-block"></i>
+                  <h6>2. Logic Rules Check</h6>
+                  <p class="small text-muted mb-0">System checks if caller should be routed</p>
+                </div>
+              </div>
+              <div class="col-md-4 text-center mb-3">
+                <div class="bg-light rounded p-3">
+                  <i class="bi bi-person-badge fs-1 text-success mb-2 d-block"></i>
+                  <h6>3. Agent Handles Call</h6>
+                  <p class="small text-muted mb-0">Specialized agent takes over</p>
+                </div>
+              </div>
+            </div>
+            <div class="alert alert-warning mt-3">
+              <i class="bi bi-lightbulb me-2"></i>
+              <strong>Tip:</strong> Use Logic Rules to automatically route callers to specialized agents based on language, time of day, or caller intent.
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) });
+  </script>
+  <script>
+    const token = '<%= token %>';
+    let currentAgentName = null;
+
+    const agents = <%- JSON.stringify(agents) %>;
+
+    document.getElementById('agentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        name: form.name.value,
+        displayName: form.displayName.value,
+        voice: form.voice.value,
+        language: form.language.value,
+        systemPrompt: form.systemPrompt.value,
+        greeting: form.greeting.value,
+        tools: '[]',
+        isDefault: form.isDefault.checked ? 'true' : 'false',
+        enabled: form.enabled.checked ? 'true' : 'false'
+      };
+
+      const res = await fetch(`/admin/agents?token=${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        alert('Agent saved!');
+        location.reload();
+      } else {
+        alert('Failed to save agent');
+      }
+    });
+
+    function editAgent(name) {
+      const agent = agents.find(a => a.name === name);
+      if (!agent) return;
+
+      currentAgentName = name;
+      document.getElementById('agentName').value = agent.name;
+      document.getElementById('agentDisplayName').value = agent.displayName;
+      document.getElementById('agentVoice').value = agent.voice;
+      document.getElementById('agentLanguage').value = agent.language;
+      document.getElementById('agentSystemPrompt').value = agent.systemPrompt;
+      document.getElementById('agentGreeting').value = agent.greeting || '';
+      document.getElementById('agentEnabled').checked = agent.enabled;
+      document.getElementById('agentIsDefault').checked = agent.isDefault;
+      document.getElementById('deleteAgentBtn').style.display = 'inline-block';
+
+      window.scrollTo({ top: document.querySelector('.card-header.bg-primary').offsetTop - 100, behavior: 'smooth' });
+    }
+
+    async function deleteAgent() {
+      if (!currentAgentName) return;
+      if (!confirm(`Delete agent "${currentAgentName}"?`)) return;
+      await fetch(`/admin/agents/${currentAgentName}?token=${token}`, { method: 'DELETE' });
+      location.reload();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<% layout('layout', { token }) %>
+<div class="card">
+  <h2>Last 30 Days — Key Metrics</h2>
+  <p><strong>Total Calls:</strong> <%= totalCalls %></p>
+  <p><strong>Completed:</strong> <%= completed %></p>
+  <p><strong>Transfers (human + dept):</strong> <%= transferred %></p>
+  <p><strong>Voicemail-ish outcomes:</strong> <%= voicemails %></p>
+  <p><strong>Avg Handle Time:</strong> <%= Math.floor(avgHandleSeconds/60) %>m <%= (avgHandleSeconds%60) %>s</p>
+</div>
+
+<div class="card">
+  <h3>Top Intents</h3>
+  <% if (top?.length) { %>
+    <table>
+      <thead><tr><th>Intent</th><th>Count</th></tr></thead>
+      <tbody>
+        <% top.forEach(([name, count]) => { %>
+          <tr><td><%= name %></td><td><%= count %></td></tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } else { %>
+    <p>No intents logged yet.</p>
+  <% } %>
+</div>

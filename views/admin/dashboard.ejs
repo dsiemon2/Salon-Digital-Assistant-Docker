@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - <%= salonName %> Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <script>window.APP_BASE_PATH = '<%= basePath %>';</script>
+  <style>
+    :root {
+      --sidebar-bg: <%= branding?.primaryColor || '#db2777' %>;
+      --sidebar-hover: <%= branding?.secondaryColor || '#be185d' %>;
+    }
+    .sidebar { min-height: 100vh; background: var(--sidebar-bg); }
+    .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .sidebar .nav-link i { margin-right: 0.5rem; }
+    .main-content { background: #f8f9fa; min-height: 100vh; }
+    .nav-divider { border-top: 1px solid rgba(255,255,255,0.2); margin: 0.5rem 0; }
+    .nav-section { color: rgba(255,255,255,0.5); font-size: 0.75rem; padding: 0.5rem 1rem; text-transform: uppercase; }
+    .stat-card { border-left: 4px solid; }
+    .stat-card.primary { border-color: <%= branding?.primaryColor || '#db2777' %>; }
+    .stat-card.success { border-color: <%= branding?.secondaryColor || '#be185d' %>; }
+    .stat-card.warning { border-color: <%= branding?.accentColor || '#ec4899' %>; }
+    .stat-card.info { border-color: #0dcaf0; }
+    .btn-outline-primary { color: <%= branding?.primaryColor || '#db2777' %>; border-color: <%= branding?.primaryColor || '#db2777' %>; }
+    .btn-outline-primary:hover { background-color: <%= branding?.primaryColor || '#db2777' %>; border-color: <%= branding?.primaryColor || '#db2777' %>; color: white; }
+    .badge.bg-primary { background-color: <%= branding?.primaryColor || '#db2777' %> !important; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <%- include('_sidebar', { token, active: 'dashboard', basePath, branding }) %>
+
+      <main class="col-md-10 ms-sm-auto main-content p-4">
+        <h2 class="mb-4">Dashboard</h2>
+
+        <div class="row mb-4">
+          <div class="col-md-3">
+            <div class="card stat-card primary">
+              <div class="card-body">
+                <h6 class="text-muted">Total Calls</h6>
+                <h3><%= stats.callCount %></h3>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card success">
+              <div class="card-body">
+                <h6 class="text-muted">Upcoming Appointments</h6>
+                <h3><%= stats.appointmentCount %></h3>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card warning">
+              <div class="card-body">
+                <h6 class="text-muted">Today's Appointments</h6>
+                <h3><%= stats.todayAppointments %></h3>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card mb-4">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Upcoming Appointments</h5>
+                <a href="<%= basePath %>/admin/appointments?token=<%= token %>" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="View all appointments">View All</a>
+              </div>
+              <div class="card-body">
+                <% if (upcomingAppointments.length === 0) { %>
+                  <p class="text-muted">No upcoming appointments</p>
+                <% } else { %>
+                  <% upcomingAppointments.forEach(appt => { %>
+                  <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                    <div>
+                      <strong><%= appt.customerName %></strong><br>
+                      <small class="text-muted"><%= appt.service.name %> <% if (appt.stylist) { %>with <%= appt.stylist.name %><% } %></small>
+                    </div>
+                    <div class="text-end">
+                      <span class="badge bg-primary"><%= formatDate(appt.appointmentDate) %></span><br>
+                      <small><%= formatTime(appt.appointmentDate) %></small>
+                    </div>
+                  </div>
+                  <% }); %>
+                <% } %>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><h5 class="mb-0">Top Intents (Last 30 Days)</h5></div>
+              <div class="card-body">
+                <% if (intentStats.length === 0) { %>
+                  <p class="text-muted">No intent data yet</p>
+                <% } else { %>
+                  <% intentStats.forEach(intent => { %>
+                  <div class="d-flex justify-content-between mb-2">
+                    <span><%= intent.intent %></span>
+                    <span class="badge bg-secondary"><%= intent._count %></span>
+                  </div>
+                  <% }); %>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Calls</h5>
+                <a href="<%= basePath %>/admin/calls?token=<%= token %>" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="View all call logs">View All</a>
+              </div>
+              <div class="card-body">
+                <table class="table table-sm" id="recentCallsTable">
+                  <thead><tr><th>Phone</th><th>Outcome</th><th>Time</th></tr></thead>
+                  <tbody>
+                    <% recentCalls.forEach(call => { %>
+                    <tr>
+                      <td><%= call.fromNumber || 'Unknown' %></td>
+                      <td>
+                        <span class="badge bg-<%=
+                          call.outcome === 'appointment_booked' ? 'success' :
+                          call.outcome === 'completed' ? 'primary' :
+                          call.outcome === 'transferred' ? 'warning' : 'secondary'
+                        %>">
+                          <%= call.outcome || 'pending' %>
+                        </span>
+                      </td>
+                      <td><%= formatDate(call.createdAt) %> <%= formatTime(call.createdAt) %></td>
+                    </tr>
+                    <% }); %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) });
+  </script>
+</body>
+</html>

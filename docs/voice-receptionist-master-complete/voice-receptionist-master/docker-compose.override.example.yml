@@ -1,0 +1,2 @@
+# Example: run everything locally (app + worker + db + redis + ngrok) with profiles
+# Usage: NGROK_AUTHTOKEN=... docker compose --profile db --profile redis --profile app --profile worker --profile ngrok up --build

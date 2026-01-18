@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DTMF Menu - Salon Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    .sidebar { min-height: 100vh; background: #2c3e50; }
+    .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .sidebar .nav-link i { margin-right: 0.5rem; }
+    .main-content { background: #f8f9fa; min-height: 100vh; }
+    .nav-divider { border-top: 1px solid rgba(255,255,255,0.2); margin: 0.5rem 0; }
+    .nav-section { color: rgba(255,255,255,0.5); font-size: 0.75rem; padding: 0.5rem 1rem; text-transform: uppercase; }
+    .keypad-btn { width: 60px; height: 60px; font-size: 1.5rem; margin: 5px; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <%- include('_sidebar', { token, active: 'dtmf' }) %>
+
+      <main class="col-md-10 ms-sm-auto main-content p-4">
+        <h2 class="mb-4"><i class="bi bi-grid-3x3 text-info me-2"></i>DTMF Menu (Press Digit)</h2>
+
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i>
+          Configure the keypad menu for callers who press digits. This serves as a fallback when voice recognition isn't working or for accessibility.
+        </div>
+
+        <!-- Menu Configuration -->
+        <div class="card mb-4">
+          <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Menu Configuration</h5>
+          </div>
+          <div class="card-body">
+            <form id="menuConfigForm">
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="menuEnabled" name="enabled" <%= menu.enabled ? 'checked' : '' %>>
+                <label class="form-check-label" for="menuEnabled"><strong>Enable DTMF Fallback Menu</strong></label>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Menu Greeting</label>
+                <textarea class="form-control" id="menuGreeting" name="greeting" rows="3"><%= menu.greeting %></textarea>
+                <small class="text-muted">Message played when caller enters DTMF mode</small>
+              </div>
+
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Timeout (seconds)</label>
+                  <input type="number" class="form-control" id="timeoutSecs" name="timeoutSecs" value="<%= menu.timeoutSecs %>" min="3" max="30">
+                  <small class="text-muted">Wait time for digit input</small>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-info text-white" data-bs-toggle="tooltip" title="Save menu configuration">
+                <i class="bi bi-save me-2"></i>Save Menu Settings
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Menu Options -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-list-ol me-2"></i>Menu Options</h5>
+          </div>
+          <div class="card-body">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Digit</th>
+                  <th>Label</th>
+                  <th>Action</th>
+                  <th>Value</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="optionsList">
+                <% options.forEach(opt => { %>
+                <tr data-digit="<%= opt.digit %>">
+                  <td><span class="badge bg-dark fs-5"><%= opt.digit %></span></td>
+                  <td><%= opt.label %></td>
+                  <td><code><%= opt.action %></code></td>
+                  <td><small><%= opt.actionValue || '-' %></small></td>
+                  <td>
+                    <span class="badge bg-<%= opt.enabled ? 'success' : 'secondary' %>">
+                      <%= opt.enabled ? 'Active' : 'Disabled' %>
+                    </span>
+                  </td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="editOption('<%= opt.digit %>', '<%= opt.label %>', '<%= opt.action %>', '<%= opt.actionValue || '' %>', <%= opt.enabled %>, <%= opt.sortOrder %>)" data-bs-toggle="tooltip" title="Edit this menu option">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteOption('<%= opt.digit %>')" data-bs-toggle="tooltip" title="Delete this menu option">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+                <% }) %>
+                <% if (options.length === 0) { %>
+                <tr><td colspan="6" class="text-center text-muted">No options configured. Add some below.</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Add New Option -->
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Add/Edit Menu Option</h5>
+          </div>
+          <div class="card-body">
+            <form id="optionForm">
+              <div class="row">
+                <div class="col-md-2 mb-3">
+                  <label class="form-label">Digit</label>
+                  <select class="form-select" id="optionDigit" name="digit" required>
+                    <option value="">...</option>
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="*">*</option>
+                    <option value="#">#</option>
+                  </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Label</label>
+                  <input type="text" class="form-control" id="optionLabel" name="label" placeholder="Event Information" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label class="form-label">Action</label>
+                  <select class="form-select" id="optionAction" name="action" required>
+                    <option value="say">Say Message</option>
+                    <option value="transfer">Transfer Call</option>
+                    <option value="voicemail">Go to Voicemail</option>
+                    <option value="ai_intent">Trigger AI Intent</option>
+                    <option value="repeat">Repeat Menu</option>
+                  </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label class="form-label">Sort Order</label>
+                  <input type="number" class="form-control" id="optionSortOrder" name="sortOrder" value="0">
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-9 mb-3">
+                  <label class="form-label">Action Value</label>
+                  <input type="text" class="form-control" id="optionActionValue" name="actionValue" placeholder="Message text, phone number, or intent name">
+                  <small class="text-muted">Depends on action: text for "say", phone for "transfer", intent for "ai_intent"</small>
+                </div>
+                <div class="col-md-3 mb-3 d-flex align-items-end">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="optionEnabled" name="enabled" checked>
+                    <label class="form-check-label" for="optionEnabled">Enabled</label>
+                  </div>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary" data-bs-toggle="tooltip" title="Save this menu option">
+                <i class="bi bi-save me-2"></i>Save Option
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Example Configuration -->
+        <div class="card mt-4">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Example Configuration</h5>
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col-md-3">
+                <div class="border rounded p-3 mb-2">
+                  <span class="badge bg-dark fs-4 keypad-btn">1</span>
+                  <div><strong>Event Info</strong></div>
+                  <small class="text-muted">say: event details</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="border rounded p-3 mb-2">
+                  <span class="badge bg-dark fs-4 keypad-btn">2</span>
+                  <div><strong>Buy Tickets</strong></div>
+                  <small class="text-muted">ai_intent: purchaseTickets</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="border rounded p-3 mb-2">
+                  <span class="badge bg-dark fs-4 keypad-btn">3</span>
+                  <div><strong>Sponsorship</strong></div>
+                  <small class="text-muted">ai_intent: getSponsorshipInfo</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="border rounded p-3 mb-2">
+                  <span class="badge bg-dark fs-4 keypad-btn">0</span>
+                  <div><strong>Speak to Human</strong></div>
+                  <small class="text-muted">transfer: +1555...</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) });
+  </script>
+  <script>
+    const token = '<%= token %>';
+
+    document.getElementById('menuConfigForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        enabled: form.enabled.checked ? 'true' : 'false',
+        greeting: form.greeting.value,
+        timeoutSecs: form.timeoutSecs.value
+      };
+
+      const res = await fetch(`/admin/dtmf/menu?token=${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        alert('Menu settings saved!');
+      } else {
+        alert('Failed to save settings');
+      }
+    });
+
+    document.getElementById('optionForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        digit: form.digit.value,
+        label: form.label.value,
+        action: form.action.value,
+        actionValue: form.actionValue.value,
+        enabled: form.enabled.checked ? 'true' : 'false',
+        sortOrder: form.sortOrder.value
+      };
+
+      const res = await fetch(`/admin/dtmf/option?token=${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        alert('Option saved!');
+        location.reload();
+      } else {
+        alert('Failed to save option');
+      }
+    });
+
+    function editOption(digit, label, action, actionValue, enabled, sortOrder) {
+      document.getElementById('optionDigit').value = digit;
+      document.getElementById('optionLabel').value = label;
+      document.getElementById('optionAction').value = action;
+      document.getElementById('optionActionValue').value = actionValue;
+      document.getElementById('optionEnabled').checked = enabled;
+      document.getElementById('optionSortOrder').value = sortOrder;
+      window.scrollTo({ top: document.querySelector('.card-header.bg-primary').offsetTop - 100, behavior: 'smooth' });
+    }
+
+    async function deleteOption(digit) {
+      if (!confirm(`Delete option for digit "${digit}"?`)) return;
+      await fetch(`/admin/dtmf/option/${digit}?token=${token}`, { method: 'DELETE' });
+      location.reload();
+    }
+  </script>
+</body>
+</html>

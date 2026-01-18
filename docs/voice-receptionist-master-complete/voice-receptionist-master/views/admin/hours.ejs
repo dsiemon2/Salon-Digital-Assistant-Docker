@@ -1,0 +1,23 @@
+<% layout('layout', { token }) %>
+<form class="card" method="post" action="/admin/hours">
+  <input type="hidden" name="token" value="<%= token %>"/>
+  <h2>Edit Address & Hours</h2>
+  <label>Address</label>
+  <input name="address" value="<%= cfg?.address || '' %>" />
+
+  <label>Hours JSON</label>
+  <textarea name="hoursJson" rows="8"><%= cfg?.hoursJson || '{ "Mon-Fri": "9am-6pm" }' %></textarea>
+
+  <label>KB Min Confidence (0–1)</label>
+  <input step="0.01" min="0" max="1" name="kbMinConfidence" value="<%= (cfg?.kbMinConfidence || 0.55) %>" />
+
+  <label>Low Confidence Action</label>
+  <select name="lowConfidenceAction">
+    <option value="ask_clarify" <%= (cfg?.lowConfidenceAction === "ask_clarify" ? "selected" : "") %>>Ask for clarification</option>
+    <option value="transfer" <%= (cfg?.lowConfidenceAction === "transfer" ? "selected" : "") %>>Transfer to human</option>
+    <option value="voicemail" <%= (cfg?.lowConfidenceAction === "voicemail" ? "selected" : "") %>>Send to voicemail</option>
+  </select>
+
+  <p><button class="btn" type="submit">Save</button></p>
+  <p><small class="mono">Tip: Provide a JSON object, e.g. {"Mon-Fri":"9am-6pm","Sat":"Closed","Sun":"Closed"}</small></p>
+</form>

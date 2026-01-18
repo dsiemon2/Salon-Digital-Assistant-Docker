@@ -1,0 +1,23 @@
+<% layout('layout', { token }) %>
+<div class="card">
+  <h2>Background Jobs</h2>
+  <% rows.forEach(r => { %>
+    <div class="card">
+      <h3><%= r.name %></h3>
+      <p><strong>Counts</strong> — Waiting: <%= r.counts.waiting %>, Active: <%= r.counts.active %>, Completed: <%= r.counts.completed %>, Failed: <%= r.counts.failed %>, Delayed: <%= r.counts.delayed %></p>
+      <h4>Recent Failed</h4>
+      <% if (r.failed.length) { %>
+        <table>
+          <thead><tr><th>ID</th><th>Name</th><th>Attempts</th><th>Reason</th></tr></thead>
+          <tbody>
+            <% r.failed.forEach(f => { %>
+              <tr><td><%= f.id %></td><td><%= f.name %></td><td><%= f.attemptsMade %></td><td><%= f.failedReason %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } else { %>
+        <p>No failures 🎉</p>
+      <% } %>
+    </div>
+  <% }) %>
+</div>

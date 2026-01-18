@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+    <linearGradient id="aiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d4ff"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="url(#bgGrad)"/>
+
+  <!-- Outer ring with pulse effect -->
+  <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+
+  <!-- AI Brain/Head silhouette -->
+  <ellipse cx="32" cy="30" rx="12" ry="14" fill="#fff" opacity="0.95"/>
+
+  <!-- Circuit pattern on head (AI element) -->
+  <g fill="none" stroke="url(#aiGrad)" stroke-width="1.5" filter="url(#glow)">
+    <!-- Central processor -->
+    <circle cx="32" cy="28" r="3" fill="url(#aiGrad)"/>
+    <!-- Circuit lines -->
+    <path d="M32 25 L32 20"/>
+    <path d="M35 28 L40 28"/>
+    <path d="M29 28 L24 28"/>
+    <path d="M34 31 L38 35"/>
+    <path d="M30 31 L26 35"/>
+    <!-- Connection nodes -->
+    <circle cx="32" cy="20" r="1.5" fill="url(#aiGrad)"/>
+    <circle cx="40" cy="28" r="1.5" fill="url(#aiGrad)"/>
+    <circle cx="24" cy="28" r="1.5" fill="url(#aiGrad)"/>
+    <circle cx="38" cy="35" r="1.5" fill="url(#aiGrad)"/>
+    <circle cx="26" cy="35" r="1.5" fill="url(#aiGrad)"/>
+  </g>
+
+  <!-- Headset band -->
+  <path d="M16 30 Q16 16 32 16 Q48 16 48 30"
+        fill="none" stroke="#2c3e50" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Left earpiece -->
+  <rect x="12" y="26" width="6" height="12" rx="2" fill="#2c3e50"/>
+  <rect x="13" y="27" width="4" height="10" rx="1.5" fill="#4a5568"/>
+
+  <!-- Right earpiece -->
+  <rect x="46" y="26" width="6" height="12" rx="2" fill="#2c3e50"/>
+  <rect x="47" y="27" width="4" height="10" rx="1.5" fill="#4a5568"/>
+
+  <!-- Microphone arm -->
+  <path d="M14 36 Q10 42 20 48" fill="none" stroke="#2c3e50" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Microphone -->
+  <ellipse cx="22" cy="49" rx="4" ry="3" fill="#2c3e50"/>
+  <ellipse cx="22" cy="49" rx="2.5" ry="2" fill="#4a5568"/>
+  <!-- Mic grill lines -->
+  <g stroke="#2c3e50" stroke-width="0.5">
+    <line x1="20" y1="49" x2="24" y2="49"/>
+    <line x1="20.5" y1="47.5" x2="23.5" y2="47.5"/>
+    <line x1="20.5" y1="50.5" x2="23.5" y2="50.5"/>
+  </g>
+
+  <!-- Voice wave indicators -->
+  <g fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.8" filter="url(#glow)">
+    <path d="M28 49 Q26 46 28 43"/>
+    <path d="M31 50 Q28 45 31 40"/>
+    <path d="M34 49 Q31 44 34 39"/>
+  </g>
+</svg>

@@ -1,0 +1,54 @@
+{
+  "name": "xyz-salon-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AI Voice Receptionist for XYZ Salon",
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "dev:admin": "tsx watch src/adminServer.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "start:admin": "node dist/adminServer.js",
+    "lint": "eslint .",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "kb:index": "tsx -e \"(async()=>{ const m=await import('./src/services/kb.js'); const r=await m.indexLocalKB('kb'); console.log(r); })().catch(e=>{ console.error(e); process.exit(1); })\"",
+    "worker": "tsx src/queues/worker.ts",
+    "seed": "tsx prisma/seed.ts",
+    "db:seed": "npx prisma db seed",
+    "compose:all": "docker compose --profile db --profile redis --profile app --profile worker up --build"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.19.0",
+    "body-parser": "^1.20.3",
+    "bullmq": "^5.7.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "googleapis": "^166.0.0",
+    "ioredis": "^5.4.2",
+    "openai": "^4.0.0",
+    "pino": "^9.4.0",
+    "stripe": "^14.0.0",
+    "twilio": "^5.3.6",
+    "uuid": "^9.0.0",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.30",
+    "@types/uuid": "^9.0.0",
+    "@types/ws": "^8.5.10",
+    "eslint": "^9.9.0",
+    "prisma": "^5.19.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.6.2"
+  }
+}

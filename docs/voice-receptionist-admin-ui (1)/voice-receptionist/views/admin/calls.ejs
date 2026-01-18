@@ -1,0 +1,22 @@
+<% layout('layout', { token }) %>
+<div class="card">
+  <h2>Recent Calls</h2>
+  <% if (calls?.length) { %>
+  <table>
+    <thead><tr><th>From</th><th>To</th><th>Start</th><th>End</th><th>Outcome</th></tr></thead>
+    <tbody>
+      <% calls.forEach(c => { %>
+        <tr>
+          <td><%= c.fromNumber %></td>
+          <td><%= c.toNumber %></td>
+          <td><%= new Date(c.startedAt).toLocaleString() %></td>
+          <td><%= c.endedAt ? new Date(c.endedAt).toLocaleString() : '—' %></td>
+          <td><%= c.outcome || '—' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  <% } else { %>
+    <p>No logs yet.</p>
+  <% } %>
+</div>

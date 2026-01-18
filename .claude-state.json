@@ -1,0 +1,14 @@
+{
+  "project": "XYZ Salon Digital Assistant",
+  "lastUpdated": "2025-12-06",
+  "recentTasks": [
+    {
+      "date": "2025-12-06",
+      "task": "Updated business config from Soup Cookoff to XYZ Salon",
+      "files": ["prisma/seed-data.ts"],
+      "status": "completed"
+    }
+  ],
+  "pendingTasks": [],
+  "notes": "Salon assistant app running at http://localhost:8011. Admin panel at /admin?token=local-dev-token"
+}

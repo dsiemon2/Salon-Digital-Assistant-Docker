@@ -1,0 +1,28 @@
+<% layout('layout', { token }) %>
+<div class="card">
+  <h2>Knowledge Base</h2>
+  <p><a class="btn" href="/admin/kb/new?token=<%= token %>">Add Article</a></p>
+  <% if (docs?.length) { %>
+    <table>
+      <thead><tr><th>Title</th><th>Language</th><th>Created</th><th></th></tr></thead>
+      <tbody>
+        <% docs.forEach(d => { %>
+          <tr>
+            <td><%= d.title %></td>
+            <td><%= d.language %></td>
+            <td><%= new Date(d.createdAt).toLocaleString() %></td>
+            <td>
+              <form method="post" action="/admin/kb/delete" onsubmit="return confirm('Delete this article?')">
+                <input type="hidden" name="token" value="<%= token %>"/>
+                <input type="hidden" name="id" value="<%= d.id %>"/>
+                <button class="btn secondary" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } else { %>
+    <p>No KB docs yet.</p>
+  <% } %>
+</div>

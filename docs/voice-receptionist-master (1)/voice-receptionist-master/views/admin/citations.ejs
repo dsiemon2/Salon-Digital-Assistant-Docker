@@ -1,0 +1,32 @@
+<% layout('layout', { token }) %>
+<div class="card">
+  <h2>KB Citations (Recent)</h2>
+  <% if (rows?.length) { %>
+    <table>
+      <thead><tr><th>When</th><th>Question</th><th>Language</th><th>CallSid</th><th>Sources (confidence)</th></tr></thead>
+      <tbody>
+        <% rows.forEach(r => { %>
+          <tr>
+            <td><%= new Date(r.createdAt).toLocaleString() %></td>
+            <td><%= r.question %></td>
+            <td><%= r.language %></td>
+            <td><%= r.callSid || '—' %></td>
+            <td>
+              <% if (r.sources?.length) { %>
+                <ul>
+                  <% r.sources.forEach(s => { %>
+                    <li><%= s.title %> — <%= Math.round((s.confidence || 0)*100) %>%</li>
+                  <% }) %>
+                </ul>
+              <% } else { %>
+                —
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } else { %>
+    <p>No citations yet.</p>
+  <% } %>
+</div>

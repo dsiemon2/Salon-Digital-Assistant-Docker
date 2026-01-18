@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Functions - Salon Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    .sidebar { min-height: 100vh; background: #2c3e50; }
+    .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .sidebar .nav-link i { margin-right: 0.5rem; }
+    .main-content { background: #f8f9fa; min-height: 100vh; }
+    .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+    .nav-divider { border-top: 1px solid rgba(255,255,255,0.2); margin: 0.5rem 0; }
+    .nav-section { color: rgba(255,255,255,0.5); font-size: 0.75rem; padding: 0.5rem 1rem; text-transform: uppercase; }
+    .function-card { border-left: 4px solid #6c757d; transition: all 0.2s; }
+    .function-card:hover { border-left-color: #0d6efd; }
+    .function-card.calendar { border-left-color: #198754; }
+    .function-card.enabled { border-left-color: #198754; }
+    .function-card.disabled { border-left-color: #dc3545; opacity: 0.7; }
+    .json-editor { font-family: monospace; font-size: 0.85rem; min-height: 150px; }
+    .provider-badge { font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <%- include('_sidebar', { token, active: 'functions' }) %>
+
+      <main class="col-md-10 ms-sm-auto main-content p-4">
+        <h2 class="mb-4"><i class="bi bi-lightning text-warning me-2"></i>Functions</h2>
+        <p class="text-muted mb-4">Configure calendar integrations and custom API functions that the AI can call during conversations.</p>
+
+        <!-- Toast container -->
+        <div class="toast-container"></div>
+
+        <!-- Calendar Integration Section -->
+        <div class="card mb-4">
+          <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Calendar Integration (Google Calendar)</h5>
+            <span class="badge bg-light text-success provider-badge">Recommended</span>
+          </div>
+          <div class="card-body">
+            <p class="text-muted mb-3">Enable calendar functions to check availability and book appointments via Google Calendar API.</p>
+
+            <form id="calendarForm">
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label class="form-label">Calendar Provider</label>
+                  <select class="form-select" name="provider" id="calendarProvider">
+                    <option value="google" <%= calendarConfig.provider === 'google' ? 'selected' : '' %>>Google Calendar</option>
+                    <option value="outlook" <%= calendarConfig.provider === 'outlook' ? 'selected' : '' %>>Microsoft Outlook</option>
+                    <option value="cal.com" <%= calendarConfig.provider === 'cal.com' ? 'selected' : '' %>>Cal.com</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Status</label>
+                  <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" id="calendarEnabled" name="enabled" <%= calendarConfig.enabled ? 'checked' : '' %>>
+                    <label class="form-check-label" for="calendarEnabled">Enable Calendar Integration</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label class="form-label">OAuth Client ID</label>
+                  <input type="text" class="form-control" name="clientId" value="<%= calendarConfig.clientId || '' %>" placeholder="Google OAuth Client ID">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">OAuth Client Secret</label>
+                  <input type="password" class="form-control" name="clientSecret" value="<%= calendarConfig.clientSecret || '' %>" placeholder="Google OAuth Client Secret">
+                </div>
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label class="form-label">Calendar ID</label>
+                  <input type="text" class="form-control" name="calendarId" value="<%= calendarConfig.calendarId || '' %>" placeholder="primary or specific calendar ID">
+                  <div class="form-text">Use "primary" for default calendar or specific calendar ID</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Refresh Token</label>
+                  <input type="password" class="form-control" name="refreshToken" value="<%= calendarConfig.refreshToken || '' %>" placeholder="OAuth Refresh Token">
+                </div>
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-md-4">
+                  <label class="form-label">Default Duration (minutes)</label>
+                  <input type="number" class="form-control" name="defaultDuration" value="<%= calendarConfig.defaultDuration %>" min="5" max="480">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Buffer Time (minutes)</label>
+                  <input type="number" class="form-control" name="bufferTime" value="<%= calendarConfig.bufferTime %>" min="0" max="60">
+                  <div class="form-text">Time between appointments</div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Webhook URL (optional)</label>
+                  <input type="url" class="form-control" name="webhookUrl" value="<%= calendarConfig.webhookUrl || '' %>" placeholder="https://...">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Working Hours (JSON)</label>
+                <textarea class="form-control json-editor" name="workingHours" rows="3"><%= calendarConfig.workingHours %></textarea>
+                <div class="form-text">Example: {"Mon-Fri": {"start": "09:00", "end": "17:00"}, "Sat": {"start": "10:00", "end": "14:00"}}</div>
+              </div>
+
+              <div class="d-flex justify-content-between">
+                <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Save calendar configuration">
+                  <i class="bi bi-save me-2"></i>Save Calendar Config
+                </button>
+                <button type="button" class="btn btn-outline-success" onclick="seedCalendarFunctions()" data-bs-toggle="tooltip" title="Add default calendar functions">
+                  <i class="bi bi-plus-circle me-2"></i>Seed Calendar Functions
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Custom Functions Section -->
+        <div class="card mb-4">
+          <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-code-slash me-2"></i>Custom Functions</h5>
+            <span data-bs-toggle="tooltip" title="Add new custom function">
+              <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#functionModal" onclick="clearFunctionForm()">
+                <i class="bi bi-plus-lg me-1"></i>Add Function
+              </button>
+            </span>
+          </div>
+          <div class="card-body">
+            <% if (functions.length === 0) { %>
+              <div class="text-center py-4">
+                <i class="bi bi-lightning display-4 text-muted"></i>
+                <p class="text-muted mt-2">No custom functions configured yet.</p>
+                <span data-bs-toggle="tooltip" title="Create your first custom function">
+                  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#functionModal" onclick="clearFunctionForm()">
+                    <i class="bi bi-plus-lg me-1"></i>Create First Function
+                  </button>
+                </span>
+              </div>
+            <% } else { %>
+              <div class="row">
+                <% functions.forEach(fn => { %>
+                  <div class="col-md-6 mb-3">
+                    <div class="card function-card <%= fn.enabled ? 'enabled' : 'disabled' %> <%= fn.type.startsWith('calendar') ? 'calendar' : '' %>">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                          <div>
+                            <h6 class="mb-1">
+                              <% if (fn.type === 'calendar_check') { %>
+                                <i class="bi bi-calendar-check text-success me-1"></i>
+                              <% } else if (fn.type === 'calendar_book') { %>
+                                <i class="bi bi-calendar-plus text-success me-1"></i>
+                              <% } else { %>
+                                <i class="bi bi-code-slash text-primary me-1"></i>
+                              <% } %>
+                              <%= fn.displayName %>
+                            </h6>
+                            <small class="text-muted d-block mb-2"><code><%= fn.name %></code></small>
+                            <p class="small mb-2"><%= fn.description %></p>
+                            <div class="d-flex gap-2">
+                              <span class="badge bg-secondary"><%= fn.method %></span>
+                              <span class="badge bg-info"><%= fn.type %></span>
+                              <span class="badge <%= fn.enabled ? 'bg-success' : 'bg-danger' %>">
+                                <%= fn.enabled ? 'Enabled' : 'Disabled' %>
+                              </span>
+                            </div>
+                          </div>
+                          <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editFunction('<%= fn.name %>')" data-bs-toggle="tooltip" title="Edit this function">
+                              <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="toggleFunction('<%= fn.name %>')" data-bs-toggle="tooltip" title="<%= fn.enabled ? 'Disable' : 'Enable' %> this function">
+                              <i class="bi bi-toggle-<%= fn.enabled ? 'on' : 'off' %>"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteFunction('<%= fn.name %>')" data-bs-toggle="tooltip" title="Delete this function">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </div>
+                        </div>
+                        <% if (fn.endpoint) { %>
+                          <div class="mt-2 small">
+                            <strong>Endpoint:</strong> <code class="text-truncate d-inline-block" style="max-width: 200px;"><%= fn.endpoint %></code>
+                          </div>
+                        <% } %>
+                      </div>
+                    </div>
+                  </div>
+                <% }); %>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Documentation Card -->
+        <div class="card">
+          <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-book me-2"></i>Function Documentation</h5>
+          </div>
+          <div class="card-body">
+            <h6>How Functions Work</h6>
+            <p>Custom functions allow the AI voice assistant to make API calls during conversations. When the AI determines it needs to execute a function, it will:</p>
+            <ol>
+              <li>Extract parameters from the conversation based on the JSON schema</li>
+              <li>Make an HTTP request to the configured endpoint</li>
+              <li>Process the response and continue the conversation</li>
+            </ol>
+
+            <h6 class="mt-4">Function Types</h6>
+            <ul>
+              <li><strong>calendar_check</strong> - Check calendar availability (uses Google Calendar API)</li>
+              <li><strong>calendar_book</strong> - Book appointments on calendar (uses Google Calendar API)</li>
+              <li><strong>custom</strong> - Custom API endpoint that you define</li>
+            </ul>
+
+            <h6 class="mt-4">Payload Types</h6>
+            <ul>
+              <li><strong>args_only</strong> - Send only the extracted arguments as JSON</li>
+              <li><strong>full_context</strong> - Include call context (callSid, callerNumber, etc.)</li>
+              <li><strong>custom</strong> - Use a custom payload template</li>
+            </ul>
+
+            <h6 class="mt-4">Parameters JSON Schema Example</h6>
+            <pre class="bg-light p-3 rounded"><code>{
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "description": "The date for the appointment (YYYY-MM-DD)"
+    },
+    "time": {
+      "type": "string",
+      "description": "Preferred time (HH:MM)"
+    }
+  },
+  "required": ["date"]
+}</code></pre>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Function Modal -->
+  <div class="modal fade" id="functionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-lightning me-2"></i>Custom Function</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="functionForm">
+          <div class="modal-body">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="form-label">Function Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="name" id="fnName" required placeholder="myCustomFunction">
+                <div class="form-text">Unique identifier, no spaces (e.g., checkInventory)</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Display Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="displayName" id="fnDisplayName" required placeholder="My Custom Function">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Description <span class="text-danger">*</span></label>
+              <textarea class="form-control" name="description" id="fnDescription" required rows="2" placeholder="Describe what this function does..."></textarea>
+              <div class="form-text">This description helps the AI understand when to use this function</div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label class="form-label">Type</label>
+                <select class="form-select" name="type" id="fnType">
+                  <option value="custom">Custom</option>
+                  <option value="calendar_check">Calendar Check</option>
+                  <option value="calendar_book">Calendar Book</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">HTTP Method</label>
+                <select class="form-select" name="method" id="fnMethod">
+                  <option value="GET">GET</option>
+                  <option value="POST" selected>POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="PATCH">PATCH</option>
+                  <option value="DELETE">DELETE</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Timeout (ms)</label>
+                <input type="number" class="form-control" name="timeout" id="fnTimeout" value="120000" min="1000" max="300000">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">API Endpoint</label>
+              <input type="url" class="form-control" name="endpoint" id="fnEndpoint" placeholder="https://api.example.com/function">
+              <div class="form-text">Leave empty for built-in calendar functions</div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="form-label">Headers (JSON)</label>
+                <textarea class="form-control json-editor" name="headers" id="fnHeaders" rows="3">{}</textarea>
+                <div class="form-text">e.g., {"Authorization": "Bearer xxx"}</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Query Parameters (JSON)</label>
+                <textarea class="form-control json-editor" name="queryParams" id="fnQueryParams" rows="3">{}</textarea>
+                <div class="form-text">e.g., {"api_key": "xxx"}</div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Parameters Schema (JSON) <span class="text-danger">*</span></label>
+              <textarea class="form-control json-editor" name="parameters" id="fnParameters" rows="6" required>{
+  "type": "object",
+  "properties": {},
+  "required": []
+}</textarea>
+              <div class="form-text">JSON Schema defining the parameters the LLM should extract</div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="form-label">Payload Type</label>
+                <select class="form-select" name="payloadType" id="fnPayloadType">
+                  <option value="args_only">Args Only</option>
+                  <option value="full_context">Full Context</option>
+                  <option value="custom">Custom Payload</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check form-switch mt-4">
+                  <input class="form-check-input" type="checkbox" id="fnEnabled" name="enabled" checked>
+                  <label class="form-check-label" for="fnEnabled">Enable Function</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3" id="customPayloadSection" style="display: none;">
+              <label class="form-label">Custom Payload Template</label>
+              <textarea class="form-control json-editor" name="customPayload" id="fnCustomPayload" rows="4"></textarea>
+              <div class="form-text">Use {{args}} for extracted arguments, {{callSid}} for call ID, etc.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Response Mapping (JSON, optional)</label>
+              <textarea class="form-control json-editor" name="responseMapping" id="fnResponseMapping" rows="3"></textarea>
+              <div class="form-text">Map API response fields to conversation variables</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-bs-toggle="tooltip" title="Cancel and close">Cancel</button>
+            <button type="submit" class="btn btn-primary" data-bs-toggle="tooltip" title="Save this function">
+              <i class="bi bi-save me-2"></i>Save Function
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) });
+  </script>
+  <script>
+    const token = '<%= token %>';
+    const functionsData = <%- JSON.stringify(functions) %>;
+
+    function showToast(message, type = 'success') {
+      const container = document.querySelector('.toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast show align-items-center text-bg-${type} border-0`;
+      toast.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">${message}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // Calendar form
+    document.getElementById('calendarForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        provider: form.provider.value,
+        enabled: form.enabled.checked ? 'true' : 'false',
+        clientId: form.clientId.value,
+        clientSecret: form.clientSecret.value,
+        calendarId: form.calendarId.value,
+        refreshToken: form.refreshToken.value,
+        defaultDuration: form.defaultDuration.value,
+        bufferTime: form.bufferTime.value,
+        webhookUrl: form.webhookUrl.value,
+        workingHours: form.workingHours.value
+      };
+
+      try {
+        const res = await fetch(`/admin/functions/calendar?token=${token}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (res.ok) {
+          showToast('Calendar configuration saved!');
+        } else {
+          showToast('Failed to save calendar config', 'danger');
+        }
+      } catch (err) {
+        showToast('Error saving calendar config', 'danger');
+      }
+    });
+
+    // Seed calendar functions
+    async function seedCalendarFunctions() {
+      try {
+        const res = await fetch(`/admin/functions/seed-calendar?token=${token}`, { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          showToast(`Added ${data.count} calendar functions!`);
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showToast('Failed to seed calendar functions', 'danger');
+        }
+      } catch (err) {
+        showToast('Error seeding functions', 'danger');
+      }
+    }
+
+    // Show/hide custom payload
+    document.getElementById('fnPayloadType').addEventListener('change', (e) => {
+      document.getElementById('customPayloadSection').style.display =
+        e.target.value === 'custom' ? 'block' : 'none';
+    });
+
+    // Clear function form
+    function clearFunctionForm() {
+      document.getElementById('functionForm').reset();
+      document.getElementById('fnName').disabled = false;
+      document.getElementById('fnParameters').value = '{\n  "type": "object",\n  "properties": {},\n  "required": []\n}';
+      document.getElementById('fnHeaders').value = '{}';
+      document.getElementById('fnQueryParams').value = '{}';
+      document.getElementById('customPayloadSection').style.display = 'none';
+    }
+
+    // Edit function
+    function editFunction(name) {
+      const fn = functionsData.find(f => f.name === name);
+      if (!fn) return;
+
+      document.getElementById('fnName').value = fn.name;
+      document.getElementById('fnName').disabled = true;
+      document.getElementById('fnDisplayName').value = fn.displayName;
+      document.getElementById('fnDescription').value = fn.description;
+      document.getElementById('fnType').value = fn.type;
+      document.getElementById('fnMethod').value = fn.method;
+      document.getElementById('fnTimeout').value = fn.timeout;
+      document.getElementById('fnEndpoint').value = fn.endpoint || '';
+      document.getElementById('fnHeaders').value = fn.headers || '{}';
+      document.getElementById('fnQueryParams').value = fn.queryParams || '{}';
+      document.getElementById('fnParameters').value = fn.parameters || '{}';
+      document.getElementById('fnPayloadType').value = fn.payloadType;
+      document.getElementById('fnCustomPayload').value = fn.customPayload || '';
+      document.getElementById('fnResponseMapping').value = fn.responseMapping || '';
+      document.getElementById('fnEnabled').checked = fn.enabled;
+
+      document.getElementById('customPayloadSection').style.display =
+        fn.payloadType === 'custom' ? 'block' : 'none';
+
+      new bootstrap.Modal(document.getElementById('functionModal')).show();
+    }
+
+    // Function form submit
+    document.getElementById('functionForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+
+      // Validate JSON fields
+      try {
+        JSON.parse(form.headers.value);
+        JSON.parse(form.queryParams.value);
+        JSON.parse(form.parameters.value);
+      } catch (err) {
+        showToast('Invalid JSON in one of the fields', 'danger');
+        return;
+      }
+
+      const data = {
+        name: form.name.value,
+        displayName: form.displayName.value,
+        description: form.description.value,
+        type: form.type.value,
+        method: form.method.value,
+        timeout: form.timeout.value,
+        endpoint: form.endpoint.value,
+        headers: form.headers.value,
+        queryParams: form.queryParams.value,
+        parameters: form.parameters.value,
+        payloadType: form.payloadType.value,
+        customPayload: form.customPayload.value || null,
+        responseMapping: form.responseMapping.value || null,
+        enabled: form.enabled.checked ? 'true' : 'false'
+      };
+
+      try {
+        const res = await fetch(`/admin/functions?token=${token}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (res.ok) {
+          showToast('Function saved!');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showToast('Failed to save function', 'danger');
+        }
+      } catch (err) {
+        showToast('Error saving function', 'danger');
+      }
+    });
+
+    // Toggle function
+    async function toggleFunction(name) {
+      try {
+        const res = await fetch(`/admin/functions/toggle/${name}?token=${token}`, { method: 'POST' });
+        if (res.ok) {
+          showToast('Function toggled!');
+          setTimeout(() => location.reload(), 500);
+        }
+      } catch (err) {
+        showToast('Error toggling function', 'danger');
+      }
+    }
+
+    // Delete function
+    async function deleteFunction(name) {
+      if (!confirm(`Delete function "${name}"?`)) return;
+      try {
+        const res = await fetch(`/admin/functions/${name}?token=${token}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast('Function deleted!');
+          setTimeout(() => location.reload(), 500);
+        }
+      } catch (err) {
+        showToast('Error deleting function', 'danger');
+      }
+    }
+  </script>
+</body>
+</html>

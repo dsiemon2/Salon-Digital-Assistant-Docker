@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appointments - Salon Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    .sidebar { min-height: 100vh; background: #2c3e50; }
+    .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .sidebar .nav-link i { margin-right: 0.5rem; }
+    .main-content { background: #f8f9fa; min-height: 100vh; }
+    .nav-divider { border-top: 1px solid rgba(255,255,255,0.2); margin: 0.5rem 0; }
+    .nav-section { color: rgba(255,255,255,0.5); font-size: 0.75rem; padding: 0.5rem 1rem; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <%- include('_sidebar', { token, active: 'appointments' }) %>
+
+      <main class="col-md-10 ms-sm-auto main-content p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2>Appointments</h2>
+          <div class="btn-group">
+            <a href="/SalonSales/admin/appointments?token=<%= token %>&filter=today" class="btn btn-<%= filter === 'today' ? 'primary' : 'outline-primary' %>">Today</a>
+            <a href="/SalonSales/admin/appointments?token=<%= token %>&filter=upcoming" class="btn btn-<%= filter === 'upcoming' ? 'primary' : 'outline-primary' %>">Upcoming</a>
+            <a href="/SalonSales/admin/appointments?token=<%= token %>&filter=past" class="btn btn-<%= filter === 'past' ? 'primary' : 'outline-primary' %>">Past</a>
+            <a href="/SalonSales/admin/appointments?token=<%= token %>&filter=cancelled" class="btn btn-<%= filter === 'cancelled' ? 'primary' : 'outline-primary' %>">Cancelled</a>
+          </div>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-md-3">
+            <div class="card text-center">
+              <div class="card-body">
+                <h5><%= stats.total %></h5>
+                <small class="text-muted">Total</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-center border-success">
+              <div class="card-body">
+                <h5 class="text-success"><%= stats.confirmed %></h5>
+                <small class="text-muted">Confirmed</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-center border-primary">
+              <div class="card-body">
+                <h5 class="text-primary"><%= stats.completed %></h5>
+                <small class="text-muted">Completed</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-center border-danger">
+              <div class="card-body">
+                <h5 class="text-danger"><%= stats.cancelled %></h5>
+                <small class="text-muted">Cancelled</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <% if (appointments.length === 0) { %>
+              <p class="text-muted text-center py-4">No appointments found</p>
+            <% } else { %>
+            <table class="table table-hover" id="appointmentsTable">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Service</th>
+                  <th>Stylist</th>
+                  <th>Date & Time</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% appointments.forEach(appt => { %>
+                <tr onclick="highlightRow(event)">
+                  <td>
+                    <strong><%= appt.customerName %></strong><br>
+                    <small class="text-muted"><%= appt.customerPhone %></small>
+                  </td>
+                  <td><%= appt.service.name %></td>
+                  <td><%= appt.stylist ? appt.stylist.name : 'Any' %></td>
+                  <td>
+                    <%= formatDate(appt.appointmentDate) %><br>
+                    <small><%= formatTime(appt.appointmentDate) %></small>
+                  </td>
+                  <td>
+                    <span class="badge bg-<%=
+                      appt.status === 'confirmed' ? 'success' :
+                      appt.status === 'completed' ? 'primary' :
+                      appt.status === 'cancelled' ? 'danger' :
+                      appt.status === 'no_show' ? 'warning' : 'secondary'
+                    %>"><%= appt.status %></span>
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <% if (appt.status === 'confirmed') { %>
+                      <button class="btn btn-outline-success" onclick="updateStatus('<%= appt.id %>', 'completed')" data-bs-toggle="tooltip" title="Mark this appointment as completed">Complete</button>
+                      <button class="btn btn-outline-danger" onclick="updateStatus('<%= appt.id %>', 'cancelled')" data-bs-toggle="tooltip" title="Cancel this appointment">Cancel</button>
+                      <button class="btn btn-outline-warning" onclick="updateStatus('<%= appt.id %>', 'no_show')" data-bs-toggle="tooltip" title="Mark customer as no-show">No Show</button>
+                      <% } %>
+                    </div>
+                  </td>
+                </tr>
+                <% }); %>
+              </tbody>
+            </table>
+            <% } %>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <%- include('../partials/grid-helpers') %>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) });
+
+    // Initialize grid with pagination and row selection
+    document.addEventListener('DOMContentLoaded', function() {
+      initGrid('appointmentsTable', { perPage: 10 });
+    });
+
+    async function updateStatus(id, status) {
+      if (!confirm('Are you sure you want to mark this appointment as ' + status + '?')) return;
+
+      const res = await fetch('/admin/appointments/' + id + '/status?token=<%= token %>', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+
+      if (res.ok) {
+        location.reload();
+      } else {
+        alert('Failed to update appointment');
+      }
+    }
+  </script>
+</body>
+</html>

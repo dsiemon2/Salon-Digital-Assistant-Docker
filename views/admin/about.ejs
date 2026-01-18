@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About - XYZ Salon Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    .sidebar { min-height: 100vh; background: #2c3e50; }
+    .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .sidebar .nav-link i { margin-right: 0.5rem; }
+    .main-content { background: #f8f9fa; min-height: 100vh; }
+    .hero-section { background: linear-gradient(135deg, #FF69B4 0%, #C71585 100%); color: white; border-radius: 12px; }
+    .feature-icon { width: 60px; height: 60px; background: #FF69B4; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <%- include('_sidebar', { token, active: 'about' }) %>
+
+      <main class="col-md-10 ms-sm-auto main-content p-4">
+        <h2 class="mb-4">About The AI Receptionist</h2>
+
+        <div class="hero-section p-5 mb-4">
+          <h1 class="display-4 mb-3">AI-Powered Salon Assistant</h1>
+          <p class="lead mb-0">Revolutionizing your front desk with intelligent voice conversations.</p>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body">
+                <h4 class="card-title mb-4">What is the AI Receptionist?</h4>
+                <p class="lead">
+                  This Digital Assistant handles phone calls for XYZ Salon, allowing your staff to focus on clients
+                  in the chair. It can book appointments, answer common questions, and manage cancellations
+                  automatically.
+                </p>
+                <p>
+                  Using advanced OpenAI Realtime Audio, it provides a natural, human-like conversational experience
+                  that reflects your salon's brand and professionalism.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-md-4">
+            <div class="card h-100">
+              <div class="card-body text-center">
+                <div class="feature-icon mx-auto mb-3">
+                  <i class="bi bi-calendar-check-fill"></i>
+                </div>
+                <h5>Smart Booking</h5>
+                <p class="text-muted">Real-time scheduling synced with your stylists' availability.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card h-100">
+              <div class="card-body text-center">
+                <div class="feature-icon mx-auto mb-3">
+                  <i class="bi bi-chat-text-fill"></i>
+                </div>
+                <h5>Knowledge Base</h5>
+                <p class="text-muted">Instantly answers FAQs about parking, payments, and services.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card h-100">
+              <div class="card-body text-center">
+                <div class="feature-icon mx-auto mb-3">
+                  <i class="bi bi-telephone-fill"></i>
+                </div>
+                <h5>24/7 Availability</h5>
+                <p class="text-muted">Never miss a client call, even after hours or during busy times.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-robot me-2"></i>Capabilities</h5>
+              </div>
+              <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                  <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Book Appointments:</strong> Finds slots and confirms bookings.</li>
+                  <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Reschedule/Cancel:</strong> Manages changes securely.</li>
+                  <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Service Pricing:</strong> Quotes specific or range prices.</li>
+                  <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Stylist Matching:</strong> Recommends staff by specialty.</li>
+                  <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Business Info:</strong> Provides hours, location, and policies.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Admin Controls</h5>
+              </div>
+              <div class="card-body">
+                <p>Use this dashboard to control every aspect of the AI:</p>
+                <ul>
+                  <li><strong>Live Call Monitoring:</strong> Watch calls and transcripts in real-time.</li>
+                  <li><strong>Service Management:</strong> Update prices and durations instantly.</li>
+                  <li><strong>Stylist Profiles:</strong> Manage shifts and specialties.</li>
+                  <li><strong>Knowledge Base:</strong> Teach the AI new answers simply by typing a document.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

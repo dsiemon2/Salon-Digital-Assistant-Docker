@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logic Rules - Salon Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    .sidebar { min-height: 100vh; background: #2c3e50; }
+    .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .sidebar .nav-link i { margin-right: 0.5rem; }
+    .main-content { background: #f8f9fa; min-height: 100vh; }
+    .nav-divider { border-top: 1px solid rgba(255,255,255,0.2); margin: 0.5rem 0; }
+    .nav-section { color: rgba(255,255,255,0.5); font-size: 0.75rem; padding: 0.5rem 1rem; text-transform: uppercase; }
+    .rule-card { transition: all 0.2s; cursor: pointer; }
+    .rule-card:hover { transform: translateY(-2px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); }
+    .condition-badge { font-family: monospace; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <%- include('_sidebar', { token, active: 'logic' }) %>
+
+      <main class="col-md-10 ms-sm-auto main-content p-4">
+        <h2 class="mb-4"><i class="bi bi-diagram-3 text-info me-2"></i>Logic Rules (Routing & Conditions)</h2>
+
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i>
+          Create rules to automatically route calls, switch agents, or trigger actions based on conditions like language, time of day, or caller intent.
+        </div>
+
+        <!-- Existing Rules -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Active Rules</h5>
+          </div>
+          <div class="card-body">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Priority</th>
+                  <th>Name</th>
+                  <th>Condition</th>
+                  <th>Action</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rulesList">
+                <% rules.forEach(rule => { %>
+                <tr data-name="<%= rule.name %>" class="rule-card" onclick="editRule('<%= rule.name %>')">
+                  <td><span class="badge bg-secondary"><%= rule.priority %></span></td>
+                  <td>
+                    <strong><%= rule.name %></strong>
+                    <% if (rule.description) { %>
+                    <br><small class="text-muted"><%= rule.description %></small>
+                    <% } %>
+                  </td>
+                  <td><code class="condition-badge"><%= rule.condition %></code></td>
+                  <td>
+                    <span class="badge bg-primary"><%= rule.action %></span>
+                    <% if (rule.actionValue) { %>
+                    <br><small><%= rule.actionValue %></small>
+                    <% } %>
+                  </td>
+                  <td>
+                    <span class="badge bg-<%= rule.enabled ? 'success' : 'secondary' %>">
+                      <%= rule.enabled ? 'Active' : 'Disabled' %>
+                    </span>
+                  </td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); editRule('<%= rule.name %>')" data-bs-toggle="tooltip" title="Edit this rule">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteRule('<%= rule.name %>')" data-bs-toggle="tooltip" title="Delete this rule">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+                <% }) %>
+                <% if (rules.length === 0) { %>
+                <tr><td colspan="6" class="text-center text-muted">No rules configured. Create your first rule below!</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Create/Edit Rule -->
+        <div class="card mb-4">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create/Edit Logic Rule</h5>
+          </div>
+          <div class="card-body">
+            <form id="ruleForm">
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Rule Name</label>
+                  <input type="text" class="form-control" id="ruleName" name="name" placeholder="spanish_caller, after_hours" required>
+                  <small class="text-muted">Unique identifier (no spaces)</small>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Description</label>
+                  <input type="text" class="form-control" id="ruleDescription" name="description" placeholder="Route Spanish speakers to Spanish agent">
+                </div>
+                <div class="col-md-2 mb-3">
+                  <label class="form-label">Priority</label>
+                  <input type="number" class="form-control" id="rulePriority" name="priority" value="0" min="0" max="100">
+                  <small class="text-muted">Higher = first</small>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Condition Type</label>
+                  <select class="form-select" id="conditionType" onchange="updateConditionHelp()">
+                    <option value="language">Language Detection</option>
+                    <option value="time">Time of Day</option>
+                    <option value="intent">Caller Intent</option>
+                    <option value="caller_id">Caller ID Pattern</option>
+                    <option value="custom">Custom Expression</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Condition Expression</label>
+                  <input type="text" class="form-control font-monospace" id="ruleCondition" name="condition" placeholder="language == 'es'" required>
+                  <small class="text-muted" id="conditionHelp">e.g., language == 'es' or language == 'spanish'</small>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Action</label>
+                  <select class="form-select" id="ruleAction" name="action" required onchange="updateActionHelp()">
+                    <option value="transfer_agent">Transfer to Agent</option>
+                    <option value="transfer_call">Transfer Call (Phone)</option>
+                    <option value="send_sms">Send SMS</option>
+                    <option value="webhook">Trigger Webhook</option>
+                    <option value="set_variable">Set Variable</option>
+                    <option value="play_message">Play Message</option>
+                    <option value="end_call">End Call</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Action Value</label>
+                  <input type="text" class="form-control" id="ruleActionValue" name="actionValue" placeholder="spanish_agent">
+                  <small class="text-muted" id="actionHelp">Agent name to transfer to</small>
+                </div>
+                <div class="col-md-2 mb-3 d-flex align-items-end">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="ruleEnabled" name="enabled" checked>
+                    <label class="form-check-label" for="ruleEnabled">Enabled</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-between">
+                <button type="submit" class="btn btn-primary" data-bs-toggle="tooltip" title="Save this logic rule">
+                  <i class="bi bi-save me-2"></i>Save Rule
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="clearForm()" data-bs-toggle="tooltip" title="Clear form fields">
+                  <i class="bi bi-x-circle me-2"></i>Clear Form
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Example Rules -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Example Rules</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6><i class="bi bi-translate me-2 text-primary"></i>Spanish Language Routing</h6>
+                    <p class="small text-muted mb-2">Route Spanish-speaking callers to a Spanish agent</p>
+                    <code class="d-block mb-2">language == 'es' OR language == 'spanish'</code>
+                    <span class="badge bg-primary">transfer_agent: spanish</span>
+                    <button class="btn btn-sm btn-outline-primary float-end" onclick="loadExample('spanish_routing', 'Route Spanish speakers to Spanish agent', 'language == \'es\' OR language == \'spanish\'', 'transfer_agent', 'spanish', 10)" data-bs-toggle="tooltip" title="Load this example into the form">
+                      <i class="bi bi-plus"></i> Use
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6><i class="bi bi-clock me-2 text-warning"></i>After Hours Handling</h6>
+                    <p class="small text-muted mb-2">Play a message after business hours</p>
+                    <code class="d-block mb-2">time.hour < 9 OR time.hour >= 17</code>
+                    <span class="badge bg-primary">play_message</span>
+                    <button class="btn btn-sm btn-outline-primary float-end" onclick="loadExample('after_hours', 'Handle calls after business hours', 'time.hour < 9 OR time.hour >= 17', 'play_message', 'Our office is currently closed. Please call back between 9 AM and 5 PM.', 20)" data-bs-toggle="tooltip" title="Load this example into the form">
+                      <i class="bi bi-plus"></i> Use
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6><i class="bi bi-star me-2 text-success"></i>VIP Caller Detection</h6>
+                    <p class="small text-muted mb-2">Transfer VIP callers directly to sales</p>
+                    <code class="d-block mb-2">caller_id.startsWith('+1555')</code>
+                    <span class="badge bg-primary">transfer_call</span>
+                    <button class="btn btn-sm btn-outline-primary float-end" onclick="loadExample('vip_caller', 'Route VIP callers to sales', 'caller_id.startsWith(\'+1555\')', 'transfer_call', '+15551234567', 30)" data-bs-toggle="tooltip" title="Load this example into the form">
+                      <i class="bi bi-plus"></i> Use
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6><i class="bi bi-ticket me-2 text-info"></i>Ticket Intent</h6>
+                    <p class="small text-muted mb-2">Notify staff when caller wants to buy tickets</p>
+                    <code class="d-block mb-2">intent == 'purchase_tickets'</code>
+                    <span class="badge bg-primary">webhook: ticket_interest</span>
+                    <button class="btn btn-sm btn-outline-primary float-end" onclick="loadExample('ticket_intent', 'Notify on ticket purchase intent', 'intent == \'purchase_tickets\'', 'webhook', 'ticket_interest', 5)" data-bs-toggle="tooltip" title="Load this example into the form">
+                      <i class="bi bi-plus"></i> Use
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- How Logic Rules Work -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>How Logic Rules Work</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4 text-center mb-3">
+                <div class="bg-light rounded p-3">
+                  <i class="bi bi-telephone-inbound fs-1 text-primary mb-2 d-block"></i>
+                  <h6>1. Call Received</h6>
+                  <p class="small text-muted mb-0">System captures caller info</p>
+                </div>
+              </div>
+              <div class="col-md-4 text-center mb-3">
+                <div class="bg-light rounded p-3">
+                  <i class="bi bi-cpu fs-1 text-warning mb-2 d-block"></i>
+                  <h6>2. Rules Evaluated</h6>
+                  <p class="small text-muted mb-0">Conditions checked by priority</p>
+                </div>
+              </div>
+              <div class="col-md-4 text-center mb-3">
+                <div class="bg-light rounded p-3">
+                  <i class="bi bi-lightning fs-1 text-success mb-2 d-block"></i>
+                  <h6>3. Action Triggered</h6>
+                  <p class="small text-muted mb-0">First matching rule executes</p>
+                </div>
+              </div>
+            </div>
+
+            <h6 class="mt-4">Available Variables:</h6>
+            <div class="row">
+              <div class="col-md-6">
+                <ul class="small">
+                  <li><code>language</code> - Detected language (en, es, etc.)</li>
+                  <li><code>caller_id</code> - Caller's phone number</li>
+                  <li><code>intent</code> - Detected caller intent</li>
+                  <li><code>time.hour</code> - Current hour (0-23)</li>
+                </ul>
+              </div>
+              <div class="col-md-6">
+                <ul class="small">
+                  <li><code>time.day</code> - Day of week (0=Sun, 6=Sat)</li>
+                  <li><code>call_duration</code> - Duration in seconds</li>
+                  <li><code>repeat_caller</code> - Boolean if called before</li>
+                  <li><code>custom.*</code> - Custom extracted variables</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) });
+  </script>
+  <script>
+    const token = '<%= token %>';
+    let currentRuleName = null;
+
+    const rules = <%- JSON.stringify(rules) %>;
+
+    document.getElementById('ruleForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        name: form.name.value,
+        description: form.description.value,
+        condition: form.condition.value,
+        action: form.action.value,
+        actionValue: form.actionValue.value,
+        priority: form.priority.value,
+        enabled: form.enabled.checked ? 'true' : 'false'
+      };
+
+      const res = await fetch(`/admin/logic?token=${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        alert('Rule saved!');
+        location.reload();
+      } else {
+        alert('Failed to save rule');
+      }
+    });
+
+    function editRule(name) {
+      const rule = rules.find(r => r.name === name);
+      if (!rule) return;
+
+      currentRuleName = name;
+      document.getElementById('ruleName').value = rule.name;
+      document.getElementById('ruleDescription').value = rule.description || '';
+      document.getElementById('ruleCondition').value = rule.condition;
+      document.getElementById('ruleAction').value = rule.action;
+      document.getElementById('ruleActionValue').value = rule.actionValue || '';
+      document.getElementById('rulePriority').value = rule.priority;
+      document.getElementById('ruleEnabled').checked = rule.enabled;
+
+      window.scrollTo({ top: document.querySelector('.card-header.bg-primary').offsetTop - 100, behavior: 'smooth' });
+    }
+
+    async function deleteRule(name) {
+      if (!confirm(`Delete rule "${name}"?`)) return;
+      await fetch(`/admin/logic/${name}?token=${token}`, { method: 'DELETE' });
+      location.reload();
+    }
+
+    function clearForm() {
+      currentRuleName = null;
+      document.getElementById('ruleForm').reset();
+      document.getElementById('rulePriority').value = '0';
+      document.getElementById('ruleEnabled').checked = true;
+    }
+
+    function loadExample(name, desc, condition, action, actionValue, priority) {
+      document.getElementById('ruleName').value = name;
+      document.getElementById('ruleDescription').value = desc;
+      document.getElementById('ruleCondition').value = condition;
+      document.getElementById('ruleAction').value = action;
+      document.getElementById('ruleActionValue').value = actionValue;
+      document.getElementById('rulePriority').value = priority;
+      document.getElementById('ruleEnabled').checked = true;
+
+      window.scrollTo({ top: document.querySelector('.card-header.bg-primary').offsetTop - 100, behavior: 'smooth' });
+    }
+
+    function updateConditionHelp() {
+      const type = document.getElementById('conditionType').value;
+      const help = document.getElementById('conditionHelp');
+      const input = document.getElementById('ruleCondition');
+
+      const hints = {
+        language: { hint: "e.g., language == 'es' or language == 'spanish'", example: "language == 'es'" },
+        time: { hint: "e.g., time.hour < 9 OR time.hour >= 17", example: "time.hour >= 17" },
+        intent: { hint: "e.g., intent == 'purchase_tickets'", example: "intent == 'purchase_tickets'" },
+        caller_id: { hint: "e.g., caller_id.startsWith('+1555')", example: "caller_id.startsWith('+1')" },
+        custom: { hint: "Any valid JavaScript expression", example: "" }
+      };
+
+      help.textContent = hints[type].hint;
+      if (hints[type].example && !input.value) {
+        input.placeholder = hints[type].example;
+      }
+    }
+
+    function updateActionHelp() {
+      const action = document.getElementById('ruleAction').value;
+      const help = document.getElementById('actionHelp');
+      const input = document.getElementById('ruleActionValue');
+
+      const hints = {
+        transfer_agent: { hint: "Agent name to transfer to", placeholder: "spanish_agent" },
+        transfer_call: { hint: "Phone number to transfer to", placeholder: "+15551234567" },
+        send_sms: { hint: "SMS template name or message", placeholder: "ticket_confirmation" },
+        webhook: { hint: "Webhook name to trigger", placeholder: "new_caller" },
+        set_variable: { hint: "variable=value format", placeholder: "vip=true" },
+        play_message: { hint: "Message to play to caller", placeholder: "Please hold while we transfer your call." },
+        end_call: { hint: "Optional goodbye message", placeholder: "Thank you for calling. Goodbye!" }
+      };
+
+      help.textContent = hints[action].hint;
+      input.placeholder = hints[action].placeholder;
+    }
+  </script>
+</body>
+</html>

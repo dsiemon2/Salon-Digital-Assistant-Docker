@@ -1,0 +1,189 @@
+<%# Grid Helpers - Row Selection and Pagination %>
+
+<style>
+  /* Row Selection Styles */
+  .table tbody tr.row-selected td {
+    background-color: #e3f2fd !important;
+    color: #333 !important;
+  }
+  .table tbody tr.row-selected td strong {
+    color: #333 !important;
+  }
+  .table tbody tr:hover:not(.row-selected) td {
+    background-color: #f8f9fa;
+  }
+  .table tbody tr {
+    cursor: pointer;
+  }
+
+  /* Pagination Styles */
+  .pagination-container {
+    margin-top: 1rem;
+  }
+  .pagination-info {
+    color: #6c757d;
+    font-size: 0.875rem;
+  }
+  .per-page-select {
+    width: auto;
+    display: inline-block;
+    margin-left: 0.5rem;
+  }
+</style>
+
+<script>
+// Row Selection Handler
+function highlightRow(event) {
+  var target = event.target;
+  var row = target.closest('tr');
+  if (!row) return;
+
+  // Prevent selection when clicking buttons, links, selects, or icons
+  if (target.tagName === 'BUTTON' || target.tagName === 'A' || target.tagName === 'SELECT' ||
+      target.tagName === 'I' || target.tagName === 'INPUT' || target.tagName === 'LABEL' ||
+      target.closest('button') || target.closest('a') || target.closest('select') ||
+      target.closest('form') || target.closest('.form-check')) {
+    return;
+  }
+
+  // Remove existing selection
+  var selectedRows = document.querySelectorAll('.table tbody tr.row-selected');
+  selectedRows.forEach(function(r) {
+    r.classList.remove('row-selected');
+  });
+
+  // Apply new selection
+  row.classList.add('row-selected');
+}
+
+// Pagination Class
+class GridPaginator {
+  constructor(tableId, options = {}) {
+    this.table = document.getElementById(tableId);
+    if (!this.table) return;
+
+    this.tbody = this.table.querySelector('tbody');
+    this.rows = Array.from(this.tbody.querySelectorAll('tr'));
+    this.perPage = options.perPage || 10;
+    this.currentPage = 1;
+    this.totalRows = this.rows.length;
+    this.totalPages = Math.ceil(this.totalRows / this.perPage);
+
+    // Create pagination container
+    this.createPaginationUI();
+    this.showPage(1);
+
+    // Add click handlers to rows
+    this.rows.forEach(row => {
+      row.setAttribute('onclick', 'highlightRow(event)');
+    });
+  }
+
+  createPaginationUI() {
+    const container = document.createElement('div');
+    container.className = 'pagination-container d-flex justify-content-between align-items-center';
+    container.innerHTML = `
+      <div class="pagination-info">
+        <span id="${this.table.id}-info"></span>
+        <select class="form-select form-select-sm per-page-select" id="${this.table.id}-perpage">
+          <option value="10" ${this.perPage === 10 ? 'selected' : ''}>10 per page</option>
+          <option value="25" ${this.perPage === 25 ? 'selected' : ''}>25 per page</option>
+          <option value="50" ${this.perPage === 50 ? 'selected' : ''}>50 per page</option>
+          <option value="100" ${this.perPage === 100 ? 'selected' : ''}>100 per page</option>
+        </select>
+      </div>
+      <nav>
+        <ul class="pagination mb-0" id="${this.table.id}-pagination"></ul>
+      </nav>
+    `;
+
+    // Insert after the table's parent card-body
+    const cardBody = this.table.closest('.card-body');
+    if (cardBody) {
+      cardBody.appendChild(container);
+    } else {
+      this.table.parentNode.appendChild(container);
+    }
+
+    // Per page change handler
+    document.getElementById(`${this.table.id}-perpage`).addEventListener('change', (e) => {
+      this.perPage = parseInt(e.target.value);
+      this.totalPages = Math.ceil(this.totalRows / this.perPage);
+      this.showPage(1);
+    });
+  }
+
+  showPage(page) {
+    this.currentPage = page;
+    const start = (page - 1) * this.perPage;
+    const end = start + this.perPage;
+
+    // Show/hide rows
+    this.rows.forEach((row, index) => {
+      row.style.display = (index >= start && index < end) ? '' : 'none';
+    });
+
+    // Update info
+    const from = this.totalRows === 0 ? 0 : start + 1;
+    const to = Math.min(end, this.totalRows);
+    document.getElementById(`${this.table.id}-info`).textContent =
+      `Showing ${from} to ${to} of ${this.totalRows} entries`;
+
+    // Render pagination
+    this.renderPagination();
+  }
+
+  renderPagination() {
+    const pagination = document.getElementById(`${this.table.id}-pagination`);
+    let html = '';
+
+    // Previous button
+    html += `<li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+      <a class="page-link" href="#" onclick="window['${this.table.id}Paginator'].showPage(${this.currentPage - 1}); return false;">Previous</a>
+    </li>`;
+
+    // Smart page range calculation (current page +/- 2)
+    let startPage = Math.max(1, this.currentPage - 2);
+    let endPage = Math.min(this.totalPages, this.currentPage + 2);
+
+    // First page + ellipsis if needed
+    if (startPage > 1) {
+      html += `<li class="page-item">
+        <a class="page-link" href="#" onclick="window['${this.table.id}Paginator'].showPage(1); return false;">1</a>
+      </li>`;
+      if (startPage > 2) {
+        html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+      }
+    }
+
+    // Page range
+    for (let i = startPage; i <= endPage; i++) {
+      html += `<li class="page-item ${i === this.currentPage ? 'active' : ''}">
+        <a class="page-link" href="#" onclick="window['${this.table.id}Paginator'].showPage(${i}); return false;">${i}</a>
+      </li>`;
+    }
+
+    // Last page + ellipsis if needed
+    if (endPage < this.totalPages) {
+      if (endPage < this.totalPages - 1) {
+        html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+      }
+      html += `<li class="page-item">
+        <a class="page-link" href="#" onclick="window['${this.table.id}Paginator'].showPage(${this.totalPages}); return false;">${this.totalPages}</a>
+      </li>`;
+    }
+
+    // Next button
+    html += `<li class="page-item ${this.currentPage === this.totalPages || this.totalPages === 0 ? 'disabled' : ''}">
+      <a class="page-link" href="#" onclick="window['${this.table.id}Paginator'].showPage(${this.currentPage + 1}); return false;">Next</a>
+    </li>`;
+
+    pagination.innerHTML = html;
+  }
+}
+
+// Initialize grid with pagination
+function initGrid(tableId, options = {}) {
+  window[tableId + 'Paginator'] = new GridPaginator(tableId, options);
+}
+</script>

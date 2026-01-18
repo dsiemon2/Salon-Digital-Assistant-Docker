@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMS Settings - Salon Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    .sidebar { min-height: 100vh; background: #2c3e50; }
+    .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 0.75rem 1rem; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+    .sidebar .nav-link i { margin-right: 0.5rem; }
+    .main-content { background: #f8f9fa; min-height: 100vh; }
+    .nav-divider { border-top: 1px solid rgba(255,255,255,0.2); margin: 0.5rem 0; }
+    .nav-section { color: rgba(255,255,255,0.5); font-size: 0.75rem; padding: 0.5rem 1rem; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <%- include('_sidebar', { token, active: 'sms' }) %>
+
+      <main class="col-md-10 ms-sm-auto main-content p-4">
+        <h2 class="mb-4"><i class="bi bi-chat-dots text-success me-2"></i>SMS Settings</h2>
+
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i>
+          Configure SMS notifications sent to callers and staff. Messages are sent via Twilio.
+        </div>
+
+        <!-- SMS Configuration -->
+        <div class="card mb-4">
+          <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="bi bi-gear me-2"></i>SMS Configuration</h5>
+          </div>
+          <div class="card-body">
+            <form id="smsConfigForm">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">From Phone Number</label>
+                  <input type="tel" class="form-control" id="fromNumber" name="fromNumber" value="<%= config.fromNumber || '' %>" placeholder="+15551234567">
+                  <small class="text-muted">Leave blank to use Twilio default. Must be a verified Twilio number.</small>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Admin Alert Number</label>
+                  <input type="tel" class="form-control" id="adminAlertNumber" name="adminAlertNumber" value="<%= config.adminAlertNumber || '' %>" placeholder="+15551234567">
+                  <small class="text-muted">Receive SMS alerts for important events</small>
+                </div>
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-12">
+                  <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="smsEnabled" name="enabled" <%= config.enabled ? 'checked' : '' %>>
+                    <label class="form-check-label" for="smsEnabled"><strong>Enable SMS Notifications</strong></label>
+                  </div>
+                </div>
+              </div>
+
+              <h6 class="mt-4 mb-3">Auto-Send SMS For:</h6>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="ticketConfirmation" name="ticketConfirmation" <%= config.ticketConfirmation ? 'checked' : '' %>>
+                    <label class="form-check-label" for="ticketConfirmation">
+                      <i class="bi bi-ticket me-1"></i> Ticket Purchase Confirmation
+                    </label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="sponsorFollowUp" name="sponsorFollowUp" <%= config.sponsorFollowUp ? 'checked' : '' %>>
+                    <label class="form-check-label" for="sponsorFollowUp">
+                      <i class="bi bi-star me-1"></i> Sponsor Inquiry Follow-up
+                    </label>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="eventReminder" name="eventReminder" <%= config.eventReminder ? 'checked' : '' %>>
+                    <label class="form-check-label" for="eventReminder">
+                      <i class="bi bi-calendar-check me-1"></i> Event Reminders (24h before)
+                    </label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="voicemailNotification" name="voicemailNotification" <%= config.voicemailNotification ? 'checked' : '' %>>
+                    <label class="form-check-label" for="voicemailNotification">
+                      <i class="bi bi-voicemail me-1"></i> Voicemail Notifications (to admin)
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-success mt-3" data-bs-toggle="tooltip" title="Save SMS configuration settings">
+                <i class="bi bi-save me-2"></i>Save Configuration
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- SMS Templates -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>SMS Templates</h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted">Customize the text messages sent for each event type. Use placeholders like <code>{{customerName}}</code>, <code>{{eventName}}</code>, <code>{{confirmationCode}}</code>.</p>
+
+            <div class="accordion" id="templatesAccordion">
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#templateTicket">
+                    Ticket Confirmation
+                  </button>
+                </h2>
+                <div id="templateTicket" class="accordion-collapse collapse show" data-bs-parent="#templatesAccordion">
+                  <div class="accordion-body">
+                    <form class="template-form" data-name="ticket_confirmation">
+                      <textarea class="form-control mb-2" rows="6" name="template">XYZ Salon Appointment Confirmation
+
+Hi {{customerName}}!
+
+Your appointment is confirmed:
+- Service: {{serviceName}}
+- Stylist: {{stylistName}}
+- Date: {{appointmentDate}}
+- Time: {{appointmentTime}}
+- Confirmation: {{confirmationCode}}
+
+See you soon! - XYZ Salon</textarea>
+                      <button type="submit" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Save this SMS template">Save Template</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#templateSponsor">
+                    Sponsor Follow-up
+                  </button>
+                </h2>
+                <div id="templateSponsor" class="accordion-collapse collapse" data-bs-parent="#templatesAccordion">
+                  <div class="accordion-body">
+                    <form class="template-form" data-name="sponsor_followup">
+                      <textarea class="form-control mb-2" rows="5" name="template">Hi {{contactName}}!
+
+Thank you for your interest in partnering with XYZ Salon{{companyName ? ' on behalf of ' + companyName : ''}}.
+
+Our team will reach out within 24 hours to discuss opportunities.
+
+- The XYZ Salon Team</textarea>
+                      <button type="submit" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Save this SMS template">Save Template</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#templateReminder">
+                    Event Reminder
+                  </button>
+                </h2>
+                <div id="templateReminder" class="accordion-collapse collapse" data-bs-parent="#templatesAccordion">
+                  <div class="accordion-body">
+                    <form class="template-form" data-name="event_reminder">
+                      <textarea class="form-control mb-2" rows="5" name="template">Hi {{customerName}}!
+
+Reminder: Your appointment at XYZ Salon is tomorrow!
+
+Service: {{serviceName}}
+Stylist: {{stylistName}}
+Date: {{appointmentDate}}
+Time: {{appointmentTime}}
+
+We look forward to seeing you!
+- XYZ Salon</textarea>
+                      <button type="submit" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Save this SMS template">Save Template</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) });
+  </script>
+  <script>
+    const token = '<%= token %>';
+
+    document.getElementById('smsConfigForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        enabled: form.enabled.checked ? 'true' : 'false',
+        fromNumber: form.fromNumber.value,
+        ticketConfirmation: form.ticketConfirmation.checked ? 'true' : 'false',
+        sponsorFollowUp: form.sponsorFollowUp.checked ? 'true' : 'false',
+        eventReminder: form.eventReminder.checked ? 'true' : 'false',
+        voicemailNotification: form.voicemailNotification.checked ? 'true' : 'false',
+        adminAlertNumber: form.adminAlertNumber.value
+      };
+
+      const res = await fetch(`/admin/sms/config?token=${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        alert('SMS configuration saved!');
+      } else {
+        alert('Failed to save configuration');
+      }
+    });
+
+    document.querySelectorAll('.template-form').forEach(form => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = form.dataset.name;
+        const template = form.querySelector('textarea').value;
+
+        const res = await fetch(`/admin/sms/template?token=${token}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, template, enabled: 'true' })
+        });
+
+        if (res.ok) {
+          alert('Template saved!');
+        } else {
+          alert('Failed to save template');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

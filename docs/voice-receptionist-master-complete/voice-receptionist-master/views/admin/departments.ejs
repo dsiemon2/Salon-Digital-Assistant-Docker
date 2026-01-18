@@ -1,0 +1,38 @@
+<% layout('layout', { token }) %>
+<div class="card">
+  <h2>Manage Departments</h2>
+  <form method="post" action="/admin/departments/add">
+    <input type="hidden" name="token" value="<%= token %>"/>
+    <label>Name</label>
+    <input name="name" placeholder="Sales" required />
+    <label>Phone</label>
+    <input name="phone" placeholder="+15551234567" required />
+    <p><button class="btn" type="submit">Add / Update</button></p>
+  </form>
+</div>
+
+<div class="card">
+  <h3>Existing</h3>
+  <% if (depts?.length) { %>
+    <table>
+      <thead><tr><th>Name</th><th>Phone</th><th></th></tr></thead>
+      <tbody>
+        <% depts.forEach(d => { %>
+          <tr>
+            <td><%= d.name %></td>
+            <td><%= d.phone %></td>
+            <td>
+              <form method="post" action="/admin/departments/delete" onsubmit="return confirm('Delete department?')">
+                <input type="hidden" name="token" value="<%= token %>"/>
+                <input type="hidden" name="id" value="<%= d.id %>"/>
+                <button class="btn secondary" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } else { %>
+    <p>No departments yet.</p>
+  <% } %>
+</div>

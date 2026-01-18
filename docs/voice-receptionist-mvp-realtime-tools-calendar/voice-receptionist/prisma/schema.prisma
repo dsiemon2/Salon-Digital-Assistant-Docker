@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model CallLog {
+  id         String   @id @default(cuid())
+  callSid    String   @unique
+  fromNumber String
+  toNumber   String
+  startedAt  DateTime @default(now())
+  endedAt    DateTime?
+  outcome    String?
+  createdAt  DateTime @default(now())
+  transcripts Transcript[]
+  messages    Message[]
+}
+
+model Transcript {
+  id        String   @id @default(cuid())
+  callLogId String
+  callLog   CallLog  @relation(fields: [callLogId], references: [id])
+  text      String
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  callLogId String
+  callLog   CallLog  @relation(fields: [callLogId], references: [id])
+  subject   String?
+  body      String
+  notified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

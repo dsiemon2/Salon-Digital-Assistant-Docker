@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:admin:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npx kill-port 8006)",
+      "Bash(del check-db.ts)",
+      "Bash(curl:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(npx tsc:*)",
+      "Bash(sqlite3:*)",
+      "Bash(del \"C:\\SCO-Digital-Assistant\\check-db.ts\")",
+      "Bash(dir:*)",
+      "Bash(xargs:*)",
+      "Bash(npm run seed:*)",
+      "Bash(del events.ejs tickets.ejs sponsors.ejs winners.ejs sponsorship.ejs event_form.ejs payments.ejs)",
+      "Bash(start http://localhost:8010/test)",
+      "Bash(start http://localhost:8011/admin/kb?token=local-dev-token)",
+      "Bash(start http://localhost:8010)",
+      "Bash(start http://localhost:8011)",
+      "Bash(npm run:*)",
+      "WebFetch(domain:localhost)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
