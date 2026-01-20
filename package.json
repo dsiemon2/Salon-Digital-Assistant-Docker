@@ -21,7 +21,8 @@
     "worker": "tsx src/queues/worker.ts",
     "seed": "tsx prisma/seed.ts",
     "db:seed": "npx prisma db seed",
-    "compose:all": "docker compose --profile db --profile redis --profile app --profile worker up --build"
+    "compose:all": "docker compose --profile db --profile redis --profile app --profile worker up --build",
+    "migrate:sqlite-to-postgres": "tsx scripts/migrate-sqlite-to-postgres.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.19.0",

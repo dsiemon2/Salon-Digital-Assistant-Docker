@@ -17,7 +17,7 @@
 ## Tech Stack
 
 - **Backend:** Node.js + Express + TypeScript
-- **Database:** Prisma + SQLite
+- **Database:** Prisma + PostgreSQL
 - **Frontend:** EJS templates + Bootstrap 5 + Bootstrap Icons
 - **Voice:** OpenAI Realtime API (WebSockets)
 - **Container:** Docker + Docker Compose

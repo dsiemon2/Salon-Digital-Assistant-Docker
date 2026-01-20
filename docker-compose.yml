@@ -15,10 +15,33 @@ networks:
     driver: bridge
 
 volumes:
-  app_data_salon:
-    name: salon_data
+  postgres_data_salon:
+    name: salon_postgres_data
 
 services:
+  # ===========================================
+  # PostgreSQL Database
+  # ===========================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: salon_postgres
+    environment:
+      - POSTGRES_USER=salon
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-salon_password}
+      - POSTGRES_DB=salon
+    volumes:
+      - postgres_data_salon:/var/lib/postgresql/data
+    ports:
+      - "5436:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U salon -d salon"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - salon_net
+    restart: unless-stopped
+
   # ===========================================
   # NGINX - Reverse Proxy (ONLY EXPOSED PORT)
   # ===========================================
@@ -50,11 +73,12 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DATABASE_URL=file:/app/data/app.db
+      - DATABASE_URL=postgresql://salon:${POSTGRES_PASSWORD:-salon_password}@postgres:5432/salon
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - DEFAULT_VOICE=${DEFAULT_VOICE:-shimmer}
-    volumes:
-      - app_data_salon:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - salon_net
     restart: unless-stopped
@@ -77,16 +101,16 @@ services:
     # NO PORTS EXPOSED - only nginx can reach it
     # Wait for app to be healthy (database initialized) before starting
     depends_on:
+      postgres:
+        condition: service_healthy
       app:
         condition: service_healthy
     environment:
       - NODE_ENV=production
       - ADMIN_PORT=3001
-      - DATABASE_URL=file:/app/data/app.db
+      - DATABASE_URL=postgresql://salon:${POSTGRES_PASSWORD:-salon_password}@postgres:5432/salon
       - ADMIN_TOKEN=${ADMIN_TOKEN:-admin}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-    volumes:
-      - app_data_salon:/app/data
     networks:
       - salon_net
     restart: unless-stopped
